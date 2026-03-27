@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>模具資產整合分析系統 | MIS 研發</title>
+    <!-- 引入 Tailwind CSS 確保介面現代化與 RWD -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 SheetJS 用於解析 Excel 檔案 (純前端處理) -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- 引入 FontAwesome 圖示 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* 自訂滾動條樣式，增添科技感 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- 系統標題區 -->
+        <header class="flex items-center justify-between glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900"><i class="fa-solid fa-cubes text-blue-600 mr-3"></i>模具資產整合分析系統</h1>
+                <p class="text-sm text-slate-500 mt-1">純前端資料關聯引擎 v1.0 | 無需後端伺服器</p>
+            </div>
+            <div class="hidden md:block text-right">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <i class="fa-solid fa-check-circle mr-1"></i> 系統就緒
+                </span>
+            </div>
+        </header>
+
+        <!-- 資料匯入區 -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- 步驟 1: 匯入產品對應表 -->
+            <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold mb-4 border-b pb-2 text-slate-800"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>步驟 1：匯入「產品Excel」</h2>
+                
+                <!-- 新增：MES 下載路徑指引 -->
+                <div class="mb-5 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                    <p class="text-sm font-medium text-blue-800 mb-1"><i class="fa-solid fa-download mr-1"></i> 檔案下載路徑：</p>
+                    <p class="text-base text-blue-900 font-bold flex flex-wrap items-center gap-2">
+                        <span>MES後台</span> <i class="fa-solid fa-angle-right text-blue-300"></i>
+                        <span>現場基本設置</span> <i class="fa-solid fa-angle-right text-blue-300"></i>
+                        <span>基本資料管理</span> <i class="fa-solid fa-angle-right text-blue-300"></i>
+                        <span>產品</span>
+                    </p>
+                    <p class="text-sm text-blue-700 mt-2 bg-blue-100 inline-block px-2 py-1 rounded"><i class="fa-solid fa-arrow-turn-down fa-rotate-90 mr-1"></i> 請下載成 Excel 並於下方匯入</p>
+                </div>
+
+                <input type="file" id="fileProducts" accept=".xlsx, .xls" class="block w-full text-sm text-slate-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-50 file:text-blue-700
+                    hover:file:bg-blue-100 transition duration-150 cursor-pointer"/>
+                <div id="statusProducts" class="mt-2 text-sm text-slate-600 font-medium"></div>
+            </div>
+
+            <!-- 步驟 2: 匯入模具列表 -->
+            <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
+                <h2 class="text-xl font-bold mb-4 border-b pb-2 text-slate-800"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>步驟 2：匯入「模具列表Excel」</h2>
+                
+                <!-- 新增：MES 下載路徑指引 -->
+                <div class="mb-5 bg-purple-50 p-4 rounded-lg border border-purple-100">
+                    <p class="text-sm font-medium text-purple-800 mb-1"><i class="fa-solid fa-download mr-1"></i> 檔案下載路徑：</p>
+                    <p class="text-base text-purple-900 font-bold flex flex-wrap items-center gap-2">
+                        <span>MES後台</span> <i class="fa-solid fa-angle-right text-purple-300"></i>
+                        <span>現場基本設置</span> <i class="fa-solid fa-angle-right text-purple-300"></i>
+                        <span>模具管理</span> <i class="fa-solid fa-angle-right text-purple-300"></i>
+                        <span>模具列表</span>
+                    </p>
+                    <p class="text-sm text-purple-700 mt-2 bg-purple-100 inline-block px-2 py-1 rounded"><i class="fa-solid fa-arrow-turn-down fa-rotate-90 mr-1"></i> 請下載成 Excel 並於下方匯入</p>
+                </div>
+
+                <input type="file" id="fileMolds" accept=".xlsx, .xls" class="block w-full text-sm text-slate-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-md file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-purple-50 file:text-purple-700
+                    hover:file:bg-purple-100 transition duration-150 cursor-pointer"/>
+                <div id="statusMolds" class="mt-2 text-sm text-slate-600 font-medium"></div>
+            </div>
+        </div>
+
+        <!-- 執行按鈕與搜尋區 -->
+        <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            
+            <!-- 新增：按鈕群組 (包含執行分析與匯出Excel) -->
+            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <button id="btnProcess" class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-sm transition duration-150 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-gears mr-2"></i> 執行資料關聯與分析
+                </button>
+                <button id="btnExport" disabled class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 shadow-sm transition duration-150 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-file-export mr-2"></i> 匯出分析報表 (Excel)
+                </button>
+            </div>
+            
+            <div class="relative w-full md:w-64">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-search text-slate-400"></i>
+                </div>
+                <input type="text" id="searchInput" placeholder="搜尋模具或產品編號..." class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 disabled:bg-slate-100 disabled:cursor-not-allowed" disabled>
+            </div>
+        </div>
+
+        <!-- 分析結果顯示區 -->
+        <div class="glass-panel rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <!-- 【修改】加上 max-h-[600px] 與 overflow-y-auto 讓表格區塊可以獨立垂直捲動 -->
+            <div class="overflow-x-auto overflow-y-auto max-h-[600px]">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <!-- 【修改】加上 sticky top-0 z-10 shadow-sm 讓表頭在捲動時固定在最上方 -->
+                    <thead class="bg-slate-50 sticky top-0 z-10 outline outline-1 outline-slate-200 shadow-sm">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">模具編號</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">對應產品編號 (共用列表)</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">客戶</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">保證壽命(次)</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">總使用次數</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">剩餘壽命數</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">模具尺寸</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultTableBody" class="bg-white divide-y divide-slate-200">
+                        <!-- 資料列將由 JavaScript 動態生成 -->
+                        <tr>
+                            <td colspan="7" class="px-6 py-12 text-center text-slate-500">
+                                <i class="fa-solid fa-inbox text-4xl mb-3 text-slate-300 block"></i>
+                                請先匯入上述兩份 Excel 檔案，並點擊「執行資料關聯與分析」
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-between items-center text-sm text-slate-600">
+                <div id="summaryText">總計模具數量：0 組</div>
+                <div class="flex gap-4">
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span> 良好 (剩餘量充足)</span>
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span> 警告 (剩餘 < 20%)</span>
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-500 mr-2"></span> 報廢/超限 (剩餘 ≤ 0)</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // 儲存解析後的 JSON 資料
+        let productsData = [];
+        let moldsData = [];
+        let mergedData = [];
+
+        // 讀取 Excel 檔案的通用函數
+        async function readExcel(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = XLSX.read(data, {type: 'array'});
+                        // 預設讀取第一個工作表
+                        const firstSheetName = workbook.SheetNames[0];
+                        const worksheet = workbook.Sheets[firstSheetName];
+                        // 轉換為 JSON 陣列，標題列作為物件屬性名稱
+                        const json = XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        resolve(json);
+                    } catch (error) {
+                        reject(error);
+                    }
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // 綁定檔案上傳事件
+        document.getElementById('fileProducts').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('statusProducts').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-500"></i> 解析中...`;
+                try {
+                    productsData = await readExcel(file);
+                    document.getElementById('statusProducts').innerHTML = `<i class="fa-solid fa-check text-green-500"></i> 成功讀取 ${productsData.length} 筆對應紀錄`;
+                } catch (err) {
+                    document.getElementById('statusProducts').innerHTML = `<i class="fa-solid fa-xmark text-red-500"></i> 讀取失敗: ${err.message}`;
+                }
+            }
+        });
+
+        document.getElementById('fileMolds').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('statusMolds').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-500"></i> 解析中...`;
+                try {
+                    moldsData = await readExcel(file);
+                    document.getElementById('statusMolds').innerHTML = `<i class="fa-solid fa-check text-green-500"></i> 成功讀取 ${moldsData.length} 筆模具資料`;
+                } catch (err) {
+                    document.getElementById('statusMolds').innerHTML = `<i class="fa-solid fa-xmark text-red-500"></i> 讀取失敗: ${err.message}`;
+                }
+            }
+        });
+
+        // 執行資料關聯邏輯 (核心 MIS 處理)
+        document.getElementById('btnProcess').addEventListener('click', () => {
+            if (productsData.length === 0 || moldsData.length === 0) {
+                alert('請先確認兩份檔案皆已成功讀取！');
+                return;
+            }
+
+            // 建立模糊搜尋欄位名稱的輔助函數，解決如「模具壽命(次)」、「總使用次數」等命名差異
+            const findValueByKeywords = (row, keywords) => {
+                const keys = Object.keys(row);
+                for (let key of keys) {
+                    for (let kw of keywords) {
+                        if (key.includes(kw)) return row[key];
+                    }
+                }
+                return undefined;
+            };
+
+            // 處理數字格式 (自動移除 Excel 千分位逗號，確保數值能正確計算)
+            const parseSafeNumber = (val) => {
+                if (val === undefined || val === null || val === '') return 0;
+                if (typeof val === 'number') return val;
+                const cleanStr = String(val).replace(/,/g, '');
+                return parseInt(cleanStr, 10) || 0;
+            };
+
+            // 建立一個關聯字典 (以模具編號為 Key，收集產品陣列)，處理共用模具問題
+            const moldToProductsMap = {};
+            
+            productsData.forEach(row => {
+                // 改用模糊匹配抓取產品表欄位
+                const moldId = findValueByKeywords(row, ['模具編號', '模具代號', 'Mold_ID']);
+                const productId = findValueByKeywords(row, ['產品編號', '產品代號', 'Product_ID']);
+                
+                if (moldId && productId) {
+                    const cleanMoldId = String(moldId).trim();
+                    if (!moldToProductsMap[cleanMoldId]) {
+                        moldToProductsMap[cleanMoldId] = new Set(); // 使用 Set 避免重複
+                    }
+                    moldToProductsMap[cleanMoldId].add(String(productId).trim());
+                }
+            });
+
+            // 遍歷模具清單，整合資料
+            mergedData = moldsData.map(mold => {
+                const moldIdVal = findValueByKeywords(mold, ['模具編號', '模具代號', 'Mold_ID']);
+                const moldId = String(moldIdVal || '').trim();
+                
+                // 針對截圖中的「模具壽命(次)」與「總使用次數」進行模糊匹配與數值安全轉換
+                const life = parseSafeNumber(findValueByKeywords(mold, ['模具壽命', '保證壽命']));
+                const usage = parseSafeNumber(findValueByKeywords(mold, ['總使用次數', '使用次數', '已生產']));
+                
+                // 將「備註」加入尺寸的搜尋關鍵字中，系統會自動抓取裡面的 250*250*250
+                const size = findValueByKeywords(mold, ['模具尺寸', '尺寸', '備註']) || '未登記';
+                
+                // 新增：客戶欄位
+                const customer = findValueByKeywords(mold, ['客戶', 'Customer']) || '';
+                
+                // 從字典中提取對應的產品清單
+                const relatedProducts = moldToProductsMap[moldId] ? Array.from(moldToProductsMap[moldId]) : [];
+
+                return {
+                    moldId,
+                    size,
+                    life,
+                    usage,
+                    customer,
+                    products: relatedProducts
+                };
+            });
+
+            // 啟用搜尋與匯出功能並渲染表格
+            document.getElementById('searchInput').disabled = false;
+            document.getElementById('btnExport').disabled = false;
+            renderTable(mergedData);
+        });
+
+        // 匯出 Excel 報表功能
+        document.getElementById('btnExport').addEventListener('click', () => {
+            if (mergedData.length === 0) {
+                alert('請先執行資料關聯與分析！');
+                return;
+            }
+
+            // 將陣列重組成 Excel 適合呈現的欄位格式，並加入預判狀態
+            const exportData = mergedData.map(item => {
+                let remainingLife = '無資料';
+                if (item.life > 0) {
+                    remainingLife = item.life - item.usage;
+                }
+
+                return {
+                    '模具編號': item.moldId,
+                    '對應產品編號(共用清單)': item.products.length > 0 ? item.products.join(', ') : '無對應產品',
+                    '客戶': item.customer,
+                    '保證壽命(次)': item.life,
+                    '總使用次數': item.usage,
+                    '剩餘壽命數': remainingLife,
+                    '模具尺寸': item.size
+                };
+            });
+
+            // 使用 SheetJS 建立工作表與活頁簿
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "模具資產整合表");
+
+            // 自動加上日期並下載檔案
+            const today = new Date();
+            const dateStr = today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0');
+            XLSX.writeFile(workbook, `模具資產整合分析表_${dateStr}.xlsx`);
+        });
+
+        // 渲染表格內容與健康狀態計算
+        function renderTable(data) {
+            const tbody = document.getElementById('resultTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="px-6 py-8 text-center text-slate-500">無符合條件的資料</td></tr>`;
+                document.getElementById('summaryText').innerText = `總計模具數量：0 組`;
+                return;
+            }
+
+            data.forEach(item => {
+                // 計算剩餘壽命與狀態標籤
+                let remainingLife = item.life - item.usage;
+                let statusHtml = '';
+                
+                if (item.life === 0) {
+                    statusHtml = `<span class="px-2 py-1 text-xs font-medium bg-slate-100 text-slate-600 rounded-full border border-slate-200">無壽命資料</span>`;
+                } else if (remainingLife <= 0) {
+                    statusHtml = `<span class="px-2 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-full border border-red-200">${remainingLife.toLocaleString()}</span>`;
+                } else if (remainingLife < (item.life * 0.2)) {
+                    statusHtml = `<span class="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full border border-yellow-200">${remainingLife.toLocaleString()}</span>`;
+                } else {
+                    statusHtml = `<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full border border-green-200">${remainingLife.toLocaleString()}</span>`;
+                }
+
+                // 處理多個產品的標籤顯示 (解決共用模具問題)
+                const productsHtml = item.products.length > 0 
+                    ? item.products.map(p => `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded">${p}</span>`).join('')
+                    : `<span class="text-slate-400 italic text-sm">無對應產品</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50 transition duration-150";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-800">${item.moldId}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600 max-w-xs flex-wrap">${productsHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${item.customer || '<span class="text-slate-400 italic text-xs">無</span>'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.life.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.usage.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right">${statusHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${item.size}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('summaryText').innerText = `總計模具數量：${data.length} 組`;
+        }
+
+        // 搜尋過濾功能 (全域搜尋)
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            const filteredData = mergedData.filter(item => {
+                // 將所有可能輸入的字串欄位都加入比對範圍
+                const matchMoldId = item.moldId.toLowerCase().includes(keyword);
+                const matchProduct = item.products.some(p => p.toLowerCase().includes(keyword));
+                const matchCustomer = item.customer.toLowerCase().includes(keyword);
+                const matchSize = item.size.toLowerCase().includes(keyword);
+                
+                // 只要有任何一個欄位符合關鍵字，就保留該筆資料
+                return matchMoldId || matchProduct || matchCustomer || matchSize;
+            });
+            renderTable(filteredData);
+        });
+
+    </script>
+</body>
+</html>
