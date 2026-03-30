@@ -169,7 +169,15 @@
 import{initializeApp}from"https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import{getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import{getFirestore,doc,setDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-const firebaseConfig={apiKey:"AIzaSyBxI-_W03mMepHGNSpUzB-ojEMfnOHfJTI",authDomain:"my-tool-dashboard.firebaseapp.com",projectId:"my-tool-dashboard",storageBucket:"my-tool-dashboard.firebasestorage.app",messagingSenderId:"6670522384",appId:"1:6670522384:web:6c627e3f56656ea7a05295"};
+const firebaseConfig = {
+  apiKey: "AIzaSyBxI-_W03mMepHGNSpUzB-ojEMfnOHfJTI",
+  authDomain: "my-tool-dashboard.firebaseapp.com",
+  projectId: "my-tool-dashboard",
+  storageBucket: "my-tool-dashboard.firebasestorage.app",
+  messagingSenderId: "6670522384",
+  appId: "1:6670522384:web:6c627e3f56656ea7a05295",
+  measurementId: "G-KTSTJD550S"
+};
 const app=initializeApp(firebaseConfig);const auth=getAuth(app);const db=getFirestore(app);
 let productsData=[],moldsData=[],mergedData=[],equipmentDict={};
 
