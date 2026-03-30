@@ -4,361 +4,806 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>模具資產整合分析系統 | MIS 研發</title>
+    <!-- 引入 Tailwind CSS 確保介面現代化與 RWD -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 SheetJS 用於解析 Excel 檔案 (純前端處理) -->
     <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+    <!-- 引入 FontAwesome 圖示 -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        ::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:#f1f1f1;border-radius:4px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:#94a3b8}.glass-panel{background:rgba(255,255,255,.95);backdrop-filter:blur(10px)}.loader{border:2px solid #f3f3f3;border-top:2px solid #3b82f6;border-radius:50%;width:16px;height:16px;animation:spin 1s linear infinite;display:inline-block}@keyframes spin{0%{transform:rotate(0)}100%{transform:rotate(360deg)}}#adminModal{transition:opacity .25s ease,transform .25s ease;opacity:0;pointer-events:none;transform:translateY(12px) scale(.97)}#adminModal.open{opacity:1;pointer-events:all;transform:translateY(0) scale(1)}@keyframes subtle-pulse{0%,100%{box-shadow:0 0 0 0 rgba(99,102,241,0)}50%{box-shadow:0 0 0 6px rgba(99,102,241,.15)}}#btnAdminToggle{animation:subtle-pulse 3s ease-in-out infinite}
+        /* 自訂滾動條樣式，增添科技感 */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+        
+        /* Firebase 載入動畫 */
+        .loader { border: 2px solid #f3f3f3; border-top: 2px solid #3b82f6; border-radius: 50%; width: 16px; height: 16px; animation: spin 1s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body class="bg-slate-100 text-slate-800 font-sans min-h-screen p-4 md:p-8 relative overflow-x-hidden">
-<div class="fixed bottom-3 right-16 text-xs font-semibold text-slate-400/60 z-40 pointer-events-none select-none tracking-wider">Crafted by 勝全 x AI</div>
-<div id="toastContainer" class="fixed top-5 right-5 z-[9999] flex flex-col gap-2 pointer-events-none"></div>
 
-<!-- 管理員入口按鈕 -->
-<button id="btnAdminToggle" title="管理員入口" class="fixed bottom-10 right-5 z-50 w-10 h-10 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center text-slate-300 hover:text-indigo-600 hover:border-indigo-400 transition-all duration-200">
-    <i class="fa-solid fa-shield-halved text-sm"></i>
-</button>
-
-<!-- 管理員懸浮視窗 -->
-<div id="adminModal" class="fixed bottom-24 right-5 z-50 w-[340px] max-h-[85vh] bg-white rounded-2xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden">
-    <div class="flex items-center justify-between px-4 py-3 bg-indigo-600 text-white flex-shrink-0">
-        <span class="font-bold text-sm flex items-center gap-2"><i class="fa-solid fa-database"></i> 設備資料庫管理</span>
-        <div class="flex items-center gap-2">
-            <span id="cloudStatusBadge" class="text-[10px] font-medium bg-white/20 px-2 py-0.5 rounded-full whitespace-nowrap"><i class="fa-solid fa-link-slash mr-1"></i>未登入</span>
-            <button id="btnCloseAdmin" class="text-white/70 hover:text-white transition ml-1"><i class="fa-solid fa-xmark"></i></button>
-        </div>
+    <!-- 專屬浮水印 -->
+    <div class="fixed bottom-3 right-4 text-xs font-semibold text-slate-400/60 z-50 pointer-events-none select-none tracking-wider">
+        Crafted by 勝全 x AI
     </div>
-    <div class="flex-1 overflow-y-auto p-4 space-y-4">
-        <!-- 登入區塊 -->
-        <div id="authSection" class="space-y-3">
-            <div class="text-center py-2">
-                <i class="fa-solid fa-lock text-3xl text-indigo-300 mb-2 block"></i>
-                <p class="text-sm font-bold text-slate-700">管理員登入</p>
-                <p class="text-xs text-slate-500 mt-1">登入後可新增、修改雲端設備資料。</p>
-            </div>
-            <input type="email" id="emailInput" placeholder="電子郵件帳號" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <input type="password" id="passwordInput" placeholder="密碼" class="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500">
-            <div class="flex gap-2">
-                <button id="btnLogin" class="flex-1 bg-indigo-600 text-white py-2 rounded-lg text-sm font-bold hover:bg-indigo-700 transition shadow-sm">登入</button>
-                <button id="btnRegister" class="flex-1 bg-slate-100 text-slate-700 py-2 rounded-lg text-sm font-bold hover:bg-slate-200 transition">註冊</button>
-            </div>
-        </div>
-        <!-- 管理區塊 -->
-        <div id="equipMainSection" class="hidden space-y-3">
-            <div class="flex justify-between items-center bg-indigo-50 px-3 py-2 rounded-lg border border-indigo-100">
-                <span class="text-xs text-indigo-800 font-medium truncate pr-2"><i class="fa-solid fa-user mr-1"></i><span id="userEmailDisplay">...</span></span>
-                <button id="btnLogout" class="text-xs text-slate-500 hover:text-red-500 font-medium border border-slate-300 px-2 py-1 rounded bg-white transition">登出</button>
-            </div>
-            <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
-                <p class="text-xs font-bold text-slate-600"><i class="fa-solid fa-plus-circle mr-1 text-indigo-500"></i>新增單筆設備</p>
-                <div class="flex gap-2">
-                    <input type="text" id="manualId" placeholder="代碼 (如 A-01)" class="w-2/5 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                    <input type="text" id="manualName" placeholder="名稱 (如 震雄...)" class="flex-1 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                    <button id="btnAddManual" class="px-3 bg-indigo-100 text-indigo-700 rounded border border-indigo-200 hover:bg-indigo-200 text-sm font-bold transition" title="新增並同步雲端"><i class="fa-solid fa-cloud-arrow-up"></i></button>
-                </div>
-            </div>
-            <details class="group bg-amber-50 border border-amber-100 rounded-lg">
-                <summary class="text-xs font-bold text-amber-800 cursor-pointer p-3 list-none flex justify-between items-center">
-                    <span><i class="fa-solid fa-file-import mr-1"></i>從 Excel 批次上傳覆蓋</span>
-                    <i class="fa-solid fa-chevron-down text-[10px] group-open:rotate-180 transition-transform"></i>
-                </summary>
-                <div class="p-3 pt-1 border-t border-amber-100 space-y-1">
-                    <input type="file" id="fileEquip" accept=".xlsx, .xls, .csv" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-amber-100 file:text-amber-700 hover:file:bg-amber-200 cursor-pointer">
-                    <div id="statusEquip" class="text-xs text-slate-600 font-medium min-h-[1rem]"></div>
-                    <p class="text-[10px] text-amber-600">⚠️ 匯入將合併覆蓋更新雲端現有資料。</p>
-                </div>
-            </details>
+
+    <!-- 自訂浮動提示容器 (取代會被封鎖的 alert) -->
+    <div id="toastContainer" class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+    <div class="max-w-7xl mx-auto space-y-6 pb-8">
+        
+        <!-- 系統標題區 -->
+        <header class="flex items-center justify-between glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
             <div>
-                <div class="flex justify-between items-center mb-1.5">
-                    <span class="text-xs font-bold text-slate-700">雲端資料 (<span id="equipCount">0</span> 筆)</span>
-                    <button id="btnClearEquip" data-confirm="false" class="text-[11px] text-red-400 hover:text-white px-2 py-0.5 rounded hover:bg-red-500 transition font-medium border border-transparent hover:border-red-600"><i class="fa-solid fa-trash-can mr-1"></i>清空雲端</button>
+                <h1 class="text-2xl font-bold text-slate-900"><i class="fa-solid fa-cubes text-blue-600 mr-3"></i>模具資產整合分析系統</h1>
+                <p class="text-sm text-slate-500 mt-1">純前端資料關聯引擎 v2.0 | Firebase 雲端資料庫版</p>
+            </div>
+            <div class="hidden md:block text-right">
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <i class="fa-solid fa-cloud-check mr-1"></i> 雲端系統就緒
+                </span>
+            </div>
+        </header>
+
+        <!-- 資料匯入與設定區 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            
+            <!-- 左側：Excel 匯入區 -->
+            <div class="lg:col-span-2 space-y-6">
+                <!-- 步驟 1: 匯入產品對應表 -->
+                <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-2 text-slate-800"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>步驟 1：匯入「產品 Excel」</h2>
+                    <div class="mb-5 bg-blue-50 p-4 rounded-lg border border-blue-100">
+                        <p class="text-sm font-medium text-blue-800 mb-1"><i class="fa-solid fa-download mr-1"></i> 檔案下載路徑：</p>
+                        <p class="text-base text-blue-900 font-bold flex flex-wrap items-center gap-2">
+                            <span>MES後台</span> <i class="fa-solid fa-angle-right text-blue-300"></i>
+                            <span>現場基本設置</span> <i class="fa-solid fa-angle-right text-blue-300"></i>
+                            <span>基本資料管理</span> <i class="fa-solid fa-angle-right text-blue-300"></i>
+                            <span>產品</span>
+                        </p>
+                        <p class="text-xs text-blue-700 mt-2 bg-blue-100 inline-flex items-center px-2 py-1 rounded whitespace-nowrap overflow-hidden text-ellipsis"><i class="fa-solid fa-info-circle mr-1"></i> 支援抓取「可用設備」，多台請用 ; 分隔</p>
+                    </div>
+                    <input type="file" id="fileProducts" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition duration-150 cursor-pointer"/>
+                    <div id="statusProducts" class="mt-2 text-sm text-slate-600 font-medium"></div>
                 </div>
-                <div class="border border-slate-200 rounded-lg bg-white shadow-inner overflow-hidden relative">
-                    <div id="tableLoading" class="absolute inset-0 bg-white/80 flex items-center justify-center z-10 hidden"><span class="loader mr-2"></span><span class="text-xs font-medium text-indigo-600">同步中...</span></div>
-                    <div class="overflow-y-auto max-h-[200px]">
-                        <table class="min-w-full divide-y divide-slate-200 text-xs">
-                            <thead class="bg-slate-100 sticky top-0">
-                                <tr><th class="px-3 py-2 text-left font-semibold text-slate-600">代碼</th><th class="px-3 py-2 text-left font-semibold text-slate-600">名稱</th><th class="px-3 py-2 text-center font-semibold text-slate-600 w-8">刪</th></tr>
+
+                <!-- 步驟 2: 匯入模具列表 -->
+                <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
+                    <h2 class="text-xl font-bold mb-4 border-b pb-2 text-slate-800"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>步驟 2：匯入「模具列表 Excel」</h2>
+                    <div class="mb-5 bg-purple-50 p-4 rounded-lg border border-purple-100">
+                        <p class="text-sm font-medium text-purple-800 mb-1"><i class="fa-solid fa-download mr-1"></i> 檔案下載路徑：</p>
+                        <p class="text-base text-purple-900 font-bold flex flex-wrap items-center gap-2">
+                            <span>MES後台</span> <i class="fa-solid fa-angle-right text-purple-300"></i>
+                            <span>現場基本設置</span> <i class="fa-solid fa-angle-right text-purple-300"></i>
+                            <span>模具管理</span> <i class="fa-solid fa-angle-right text-purple-300"></i>
+                            <span>模具列表</span>
+                        </p>
+                    </div>
+                    <input type="file" id="fileMolds" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 transition duration-150 cursor-pointer"/>
+                    <div id="statusMolds" class="mt-2 text-sm text-slate-600 font-medium"></div>
+                </div>
+            </div>
+
+            <!-- 右側：Firebase 雲端設備對應表維護區 -->
+            <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full relative">
+                <h2 class="text-xl font-bold mb-4 border-b pb-2 text-slate-800 flex justify-between items-center">
+                    <span><i class="fa-solid fa-database text-blue-500 mr-2"></i>步驟 3：設備對應表</span>
+                    <span id="cloudStatusBadge" class="text-xs font-normal text-white bg-slate-400 px-2 py-1 rounded transition-colors"><i class="fa-solid fa-link-slash mr-1"></i>未登入</span>
+                </h2>
+                
+                <!-- 【登入區塊】未登入時顯示 -->
+                <div id="authSection" class="flex flex-col gap-3 py-4 mt-4">
+                    <div class="text-center mb-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-4xl text-blue-300 mb-2"></i>
+                        <p class="text-sm font-bold text-slate-700">雲端設備資料庫</p>
+                        <p class="text-xs text-slate-500 mt-1">請登入帳號以存取、維護全公司共用的設備代碼清單。</p>
+                    </div>
+                    <input type="email" id="emailInput" placeholder="電子郵件帳號" class="px-3 py-2.5 border border-slate-300 rounded text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <input type="password" id="passwordInput" placeholder="密碼" class="px-3 py-2.5 border border-slate-300 rounded text-sm w-full focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="flex gap-2 mt-2">
+                        <button id="btnLogin" class="flex-1 bg-blue-600 text-white px-3 py-2.5 rounded text-sm font-bold hover:bg-blue-700 transition shadow-sm">登入</button>
+                        <button id="btnRegister" class="flex-1 bg-slate-200 text-slate-700 px-3 py-2.5 rounded text-sm font-bold hover:bg-slate-300 transition">註冊新帳號</button>
+                    </div>
+                </div>
+
+                <!-- 【設備維護區塊】登入後顯示 -->
+                <div id="equipMainSection" class="hidden flex-col h-full">
+                    <!-- 使用者狀態列 -->
+                    <div class="flex justify-between items-center bg-blue-50 p-2.5 rounded border border-blue-100 mb-4">
+                        <span class="text-xs text-blue-800 font-medium truncate pr-2"><i class="fa-solid fa-user mr-1"></i><span id="userEmailDisplay">...</span></span>
+                        <button id="btnLogout" class="text-xs text-slate-500 hover:text-red-500 font-medium border border-slate-300 px-2 py-1 rounded bg-white">登出</button>
+                    </div>
+
+                    <!-- 手動單筆新增 -->
+                    <div class="flex gap-2 mb-4 bg-slate-50 p-2 rounded border border-slate-200">
+                        <input type="text" id="manualId" placeholder="代碼(如A-01)" class="w-1/3 px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <input type="text" id="manualName" placeholder="名稱(如震雄...)" class="w-[50%] px-2 py-1.5 border border-slate-300 rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500">
+                        <button id="btnAddManual" class="w-1/6 bg-blue-100 text-blue-700 rounded border border-blue-200 hover:bg-blue-200 text-sm font-bold transition" title="寫入雲端">
+                            <i class="fa-solid fa-plus"></i>
+                        </button>
+                    </div>
+
+                    <!-- 設備 Excel 批次匯入 (折疊區域) -->
+                    <details class="mb-4 group bg-orange-50 border border-orange-100 rounded-lg">
+                        <summary class="text-sm font-bold text-orange-800 cursor-pointer p-2 list-none flex justify-between items-center">
+                            <span><i class="fa-solid fa-file-import mr-1"></i> 或從 Excel 批次上傳覆蓋</span>
+                            <i class="fa-solid fa-chevron-down text-xs group-open:rotate-180 transition-transform"></i>
+                        </summary>
+                        <div class="p-3 pt-0 border-t border-orange-100 mt-1">
+                            <input type="file" id="fileEquip" accept=".xlsx, .xls, .csv" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-orange-100 file:text-orange-700 hover:file:bg-orange-200 transition cursor-pointer mb-2"/>
+                            <div id="statusEquip" class="text-xs text-slate-600 font-medium"></div>
+                            <p class="text-[10px] text-orange-600 mt-1">⚠️ 匯入將會與雲端現有資料進行合併與覆蓋更新。</p>
+                        </div>
+                    </details>
+
+                    <div class="flex justify-between items-end mb-2 h-6">
+                        <span class="text-sm font-bold text-slate-700">雲端設備資料：</span>
+                        <button id="btnClearEquip" data-confirm="false" class="text-xs text-red-500 hover:text-white px-2 py-1 rounded hover:bg-red-500 transition cursor-pointer font-medium border border-transparent hover:border-red-600">
+                            <i class="fa-solid fa-trash-can mr-1"></i>清空雲端
+                        </button>
+                    </div>
+
+                    <!-- 維護列表 -->
+                    <div class="flex-grow overflow-y-auto max-h-[250px] border border-slate-200 rounded-md bg-white shadow-inner relative">
+                        <!-- 讀取中遮罩 -->
+                        <div id="tableLoading" class="absolute inset-0 bg-white/80 flex items-center justify-center z-10 hidden">
+                            <span class="loader mr-2"></span> <span class="text-sm font-medium text-blue-600">同步中...</span>
+                        </div>
+                        <table class="min-w-full divide-y divide-slate-200 text-sm">
+                            <thead class="bg-slate-100 sticky top-0 z-20 outline outline-1 outline-slate-200">
+                                <tr>
+                                    <th class="px-3 py-2 text-left font-semibold text-slate-600">編號代碼</th>
+                                    <th class="px-3 py-2 text-left font-semibold text-slate-600">設備名稱</th>
+                                    <th class="px-3 py-2 text-center font-semibold text-slate-600 w-12">操作</th>
+                                </tr>
                             </thead>
-                            <tbody id="equipTableBody" class="bg-white divide-y divide-slate-100"></tbody>
+                            <tbody id="equipTableBody" class="bg-white divide-y divide-slate-100">
+                                <!-- JS 動態產生 -->
+                            </tbody>
                         </table>
+                    </div>
+                    <div class="mt-2 text-xs text-slate-500 text-right">
+                        共 <span id="equipCount">0</span> 筆雲端資料
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
-</div>
 
-<!-- 主畫面 -->
-<div class="max-w-7xl mx-auto space-y-6 pb-8">
-    <header class="flex items-center justify-between glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-900"><i class="fa-solid fa-cubes text-blue-600 mr-3"></i>模具資產整合分析系統</h1>
-            <p class="text-sm text-slate-500 mt-1">純前端資料關聯引擎 v2.1 | Firebase 雲端資料庫版</p>
         </div>
-        <div class="hidden md:flex items-center gap-3">
-            <span id="cloudReadStatus" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500">
-                <span class="loader mr-2" style="width:10px;height:10px;border-width:1.5px;border-top-color:#3b82f6;"></span> 連線中...
-            </span>
-        </div>
-    </header>
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
-            <h2 class="text-xl font-bold mb-4 border-b pb-2 text-slate-800"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>步驟 1：匯入「產品 Excel」</h2>
-            <div class="mb-5 bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <p class="text-sm font-medium text-blue-800 mb-1"><i class="fa-solid fa-download mr-1"></i> 檔案下載路徑：</p>
-                <p class="text-base text-blue-900 font-bold flex flex-wrap items-center gap-2"><span>MES後台</span><i class="fa-solid fa-angle-right text-blue-300"></i><span>現場基本設置</span><i class="fa-solid fa-angle-right text-blue-300"></i><span>基本資料管理</span><i class="fa-solid fa-angle-right text-blue-300"></i><span>產品</span></p>
-                <p class="text-xs text-blue-700 mt-2 bg-blue-100 inline-block px-2 py-1 rounded"><i class="fa-solid fa-info-circle mr-1"></i> 支援抓取「可用設備」欄位，多設備用分號 ; 分隔</p>
+
+        <!-- 執行按鈕與搜尋區 -->
+        <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+                <button id="btnProcess" class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-sm transition duration-150 flex items-center justify-center">
+                    <i class="fa-solid fa-gears mr-2"></i> 執行資料關聯與分析
+                </button>
+                <button id="btnExport" disabled class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 shadow-sm transition duration-150 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-file-export mr-2"></i> 匯出分析報表 (Excel)
+                </button>
             </div>
-            <input type="file" id="fileProducts" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 transition cursor-pointer"/>
-            <div id="statusProducts" class="mt-2 text-sm text-slate-600 font-medium min-h-[1.5rem]"></div>
-        </div>
-        <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
-            <h2 class="text-xl font-bold mb-4 border-b pb-2 text-slate-800"><i class="fa-solid fa-file-excel text-green-600 mr-2"></i>步驟 2：匯入「模具列表 Excel」</h2>
-            <div class="mb-5 bg-purple-50 p-4 rounded-lg border border-purple-100">
-                <p class="text-sm font-medium text-purple-800 mb-1"><i class="fa-solid fa-download mr-1"></i> 檔案下載路徑：</p>
-                <p class="text-base text-purple-900 font-bold flex flex-wrap items-center gap-2"><span>MES後台</span><i class="fa-solid fa-angle-right text-purple-300"></i><span>現場基本設置</span><i class="fa-solid fa-angle-right text-purple-300"></i><span>模具管理</span><i class="fa-solid fa-angle-right text-purple-300"></i><span>模具列表</span></p>
-            </div>
-            <input type="file" id="fileMolds" accept=".xlsx, .xls, .csv" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 transition cursor-pointer"/>
-            <div id="statusMolds" class="mt-2 text-sm text-slate-600 font-medium min-h-[1.5rem]"></div>
-        </div>
-    </div>
-    <div class="glass-panel p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-center gap-4">
-        <div class="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-            <button id="btnProcess" class="w-full sm:w-auto px-6 py-2.5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 shadow-sm transition flex items-center justify-center"><i class="fa-solid fa-gears mr-2"></i> 執行資料關聯與分析</button>
-            <button id="btnExport" disabled class="w-full sm:w-auto px-6 py-2.5 bg-emerald-600 text-white font-medium rounded-lg hover:bg-emerald-700 shadow-sm transition flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed"><i class="fa-solid fa-file-export mr-2"></i> 匯出分析報表 (Excel)</button>
-        </div>
-        <div class="relative w-full md:w-64">
-            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"><i class="fa-solid fa-search text-slate-400"></i></div>
-            <input type="text" id="searchInput" placeholder="搜尋模具、產品或設備..." class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 sm:text-sm transition disabled:bg-slate-100 disabled:cursor-not-allowed" disabled>
-        </div>
-    </div>
-    <div class="glass-panel rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="overflow-x-auto overflow-y-auto max-h-[600px]">
-            <table class="min-w-full divide-y divide-slate-200">
-                <thead class="bg-slate-50 sticky top-0 z-10 outline outline-1 outline-slate-200 shadow-sm">
-                    <tr>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">模具編號</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">對應產品編號</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">客戶</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 border-b-2 border-blue-200">設備編號</th>
-                        <th class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 border-b-2 border-blue-200">設備名稱</th>
-                        <th class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">保證壽命</th>
-                        <th class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">總使用次數</th>
-                        <th class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">剩餘壽命數</th>
-                    </tr>
-                </thead>
-                <tbody id="resultTableBody" class="bg-white divide-y divide-slate-200">
-                    <tr><td colspan="8" class="px-6 py-12 text-center text-slate-500"><i class="fa-solid fa-inbox text-4xl mb-3 text-slate-300 block"></i>請確認資料並點擊「執行資料關聯與分析」</td></tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-between items-center text-sm text-slate-600">
-            <div id="summaryText">總計模具數量：0 組</div>
-            <div class="flex gap-4">
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span> 良好</span>
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span> 警告</span>
-                <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-500 mr-2"></span> 報廢/超限</span>
+            
+            <div class="relative w-full md:w-64">
+                <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <i class="fa-solid fa-search text-slate-400"></i>
+                </div>
+                <input type="text" id="searchInput" placeholder="搜尋模具、產品或設備..." class="block w-full pl-10 pr-3 py-2 border border-slate-300 rounded-lg leading-5 bg-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition duration-150 disabled:bg-slate-100 disabled:cursor-not-allowed" disabled>
             </div>
         </div>
+
+        <!-- 分析結果顯示區 -->
+        <div class="glass-panel rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="overflow-x-auto overflow-y-auto max-h-[600px]">
+                <table class="min-w-full divide-y divide-slate-200">
+                    <thead class="bg-slate-50 sticky top-0 z-10 outline outline-1 outline-slate-200 shadow-sm">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">模具編號</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">對應產品編號</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">客戶</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 border-b-2 border-blue-200">設備編號</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 border-b-2 border-blue-200">設備名稱</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">保證壽命</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">總使用次數</th>
+                            <th scope="col" class="px-6 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">剩餘壽命數</th>
+                        </tr>
+                    </thead>
+                    <tbody id="resultTableBody" class="bg-white divide-y divide-slate-200">
+                        <tr>
+                            <td colspan="8" class="px-6 py-12 text-center text-slate-500">
+                                <i class="fa-solid fa-inbox text-4xl mb-3 text-slate-300 block"></i>
+                                請確認資料並點擊「執行資料關聯與分析」
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="bg-slate-50 px-6 py-3 border-t border-slate-200 flex justify-between items-center text-sm text-slate-600">
+                <div id="summaryText">總計模具數量：0 組</div>
+                <div class="flex gap-4">
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span> 良好</span>
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-500 mr-2"></span> 警告</span>
+                    <span class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-500 mr-2"></span> 報廢/超限</span>
+                </div>
+            </div>
+        </div>
+
     </div>
-</div>
 
-<script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import{getAuth,signInWithEmailAndPassword,createUserWithEmailAndPassword,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import{getFirestore,doc,setDoc,onSnapshot}from"https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
-const firebaseConfig = {
-  apiKey: "AIzaSyBxI-_W03mMepHGNSpUzB-ojEMfnOHfJTI",
-  authDomain: "my-tool-dashboard.firebaseapp.com",
-  projectId: "my-tool-dashboard",
-  storageBucket: "my-tool-dashboard.firebasestorage.app",
-  messagingSenderId: "6670522384",
-  appId: "1:6670522384:web:6c627e3f56656ea7a05295",
-  measurementId: "G-KTSTJD550S"
-};
-const app=initializeApp(firebaseConfig);const auth=getAuth(app);const db=getFirestore(app);
-let productsData=[],moldsData=[],mergedData=[],equipmentDict={};
+    <!-- 必須使用 type="module" 來載入 Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-function showToast(msg,type='error'){
-    const c=document.getElementById('toastContainer');
-    const t=document.createElement('div');
-    const m={error:{bg:'bg-red-600',ic:'fa-circle-exclamation'},success:{bg:'bg-emerald-600',ic:'fa-circle-check'},warning:{bg:'bg-yellow-500',ic:'fa-triangle-exclamation'}};
-    const{bg,ic}=m[type]||m.error;
-    t.className=`${bg} text-white px-5 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full opacity-0 flex items-center gap-2 font-medium text-sm pointer-events-auto`;
-    t.innerHTML=`<i class="fa-solid ${ic}"></i><span>${msg}</span>`;
-    c.appendChild(t);requestAnimationFrame(()=>t.classList.remove('translate-x-full','opacity-0'));
-    setTimeout(()=>{t.classList.add('translate-x-full','opacity-0');setTimeout(()=>t.remove(),300)},3000);
-}
+        // --- Firebase 設定 (使用您提供的金鑰) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBxI-_W03mMepHGNSpUzB-ojEMfnOHfJTI",
+            authDomain: "my-tool-dashboard.firebaseapp.com",
+            projectId: "my-tool-dashboard",
+            storageBucket: "my-tool-dashboard.firebasestorage.app",
+            messagingSenderId: "6670522384",
+            appId: "1:6670522384:web:6c627e3f56656ea7a05295",
+            measurementId: "G-KTSTJD550S"
+        };
 
-const norm=s=>{if(s==null)return'';return String(s).toUpperCase().replace(/[\s\uFEFF\u200B\n\r]/g,'')};
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        
+        // 全域變數
+        let productsData = [];
+        let moldsData = [];
+        let mergedData = [];
+        let equipmentDict = {}; // 現在由 Firebase 即時接管
+        let dbUnsubscribe = null;
 
-// 管理員視窗開關
-const adminModal=document.getElementById('adminModal');
-document.getElementById('btnAdminToggle').addEventListener('click',()=>adminModal.classList.toggle('open'));
-document.getElementById('btnCloseAdmin').addEventListener('click',()=>adminModal.classList.remove('open'));
+        // --- 自訂浮動提示功能 ---
+        function showToast(message, type = 'error') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            let bgClass = 'bg-red-600';
+            let iconClass = 'fa-circle-exclamation';
+            if (type === 'success') { bgClass = 'bg-emerald-600'; iconClass = 'fa-circle-check'; }
+            if (type === 'warning') { bgClass = 'bg-yellow-500'; iconClass = 'fa-triangle-exclamation'; }
 
-// Firebase 寫入
-async function updateFB(dict){
-    document.getElementById('tableLoading').classList.remove('hidden');
-    try{await setDoc(doc(db,'appData','equipmentMap'),{mapping:dict});}
-    catch(e){console.error(e);showToast('雲端同步失敗！','error');}
-    finally{document.getElementById('tableLoading').classList.add('hidden');}
-}
+            toast.className = `${bgClass} text-white px-5 py-3 rounded-lg shadow-lg transform transition-all duration-300 translate-x-full opacity-0 flex items-center gap-2 font-medium text-sm`;
+            toast.innerHTML = `<i class="fa-solid ${iconClass}"></i> <span>${message}</span>`;
+            
+            container.appendChild(toast);
+            requestAnimationFrame(() => toast.classList.remove('translate-x-full', 'opacity-0'));
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
 
-// 渲染設備表
-function renderEquipTable(){
-    const tbody=document.getElementById('equipTableBody');tbody.innerHTML='';
-    const keys=Object.keys(equipmentDict).sort();
-    if(!keys.length){tbody.innerHTML='<tr><td colspan="3" class="px-3 py-6 text-center text-slate-400 italic text-xs">尚無雲端資料</td></tr>';return;}
-    keys.forEach(k=>{
-        const tr=document.createElement('tr');tr.className='hover:bg-slate-50';
-        tr.innerHTML=`<td class="px-3 py-2 font-bold text-slate-700">${k}</td><td class="px-3 py-2 text-slate-600 truncate max-w-[100px]" title="${equipmentDict[k]}">${equipmentDict[k]}</td><td class="px-3 py-2 text-center"><button class="btn-del text-slate-300 hover:text-red-500 transition p-1" data-id="${k}" data-confirm="false"><i class="fa-solid fa-trash-can pointer-events-none text-xs"></i></button></td>`;
-        tbody.appendChild(tr);
-    });
-    document.getElementById('equipCount').innerText=keys.length;
-    document.querySelectorAll('.btn-del').forEach(btn=>{
-        btn.addEventListener('click',e=>{
-            const id=e.currentTarget.dataset.id,el=e.currentTarget;
-            if(el.dataset.confirm==='true'){delete equipmentDict[id];updateFB(equipmentDict);showToast(`已刪除 [${id}]`,'success');}
-            else{const orig=el.innerHTML;el.innerHTML='<span class="text-[10px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded">確定?</span>';el.dataset.confirm='true';setTimeout(()=>{if(document.body.contains(el)){el.innerHTML=orig;el.dataset.confirm='false';}},3000);}
+        // 【極致淨化器】
+        const normalizeString = (str) => {
+            if (str === undefined || str === null) return '';
+            return String(str).toUpperCase().replace(/[\s\uFEFF\u200B\n\r]/g, '');
+        };
+
+        // --- Firebase Firestore 更新封裝 ---
+        async function updateFirebaseDict(newDict) {
+            document.getElementById('tableLoading').classList.remove('hidden');
+            try {
+                // 將字典存入單一文件 (Collection: appData, Document: equipmentMap)
+                await setDoc(doc(db, 'appData', 'equipmentMap'), { mapping: newDict });
+            } catch (err) {
+                console.error(err);
+                showToast('雲端同步失敗，請確認 Firebase 資料庫寫入權限！', 'error');
+            } finally {
+                document.getElementById('tableLoading').classList.add('hidden');
+            }
+        }
+
+        // --- 渲染設備表 ---
+        function renderEquipTable() {
+            const tbody = document.getElementById('equipTableBody');
+            tbody.innerHTML = '';
+            const keys = Object.keys(equipmentDict).sort();
+            
+            if(keys.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="px-3 py-8 text-center text-slate-400 italic">雲端資料庫尚無資料</td></tr>`;
+            } else {
+                keys.forEach(key => {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td class="px-3 py-2 whitespace-nowrap text-slate-700 font-bold">${key}</td>
+                        <td class="px-3 py-2 text-slate-600 truncate max-w-[120px]" title="${equipmentDict[key]}">${equipmentDict[key]}</td>
+                        <td class="px-3 py-2 text-center">
+                            <button class="btn-del text-slate-400 hover:text-red-600 transition p-1" data-id="${key}" title="刪除此筆">
+                                <i class="fa-solid fa-trash-can pointer-events-none"></i>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            document.getElementById('equipCount').innerText = keys.length;
+            
+            // 綁定動態刪除按鈕事件
+            document.querySelectorAll('.btn-del').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const id = e.currentTarget.dataset.id;
+                    const btnEl = e.currentTarget;
+                    
+                    if (btnEl.dataset.confirm === 'true') {
+                        delete equipmentDict[id];
+                        updateFirebaseDict(equipmentDict);
+                        showToast(`已從雲端刪除 [${id}]`, 'success');
+                    } else {
+                        const origHtml = btnEl.innerHTML;
+                        btnEl.innerHTML = '<span class="text-xs font-bold text-white">確定?</span>';
+                        btnEl.classList.replace('text-slate-400', 'bg-red-500');
+                        btnEl.classList.replace('hover:text-red-600', 'hover:bg-red-600');
+                        btnEl.classList.add('rounded');
+                        btnEl.dataset.confirm = 'true';
+                        
+                        setTimeout(() => {
+                            if (document.body.contains(btnEl)) { 
+                                btnEl.innerHTML = origHtml;
+                                btnEl.classList.replace('bg-red-500', 'text-slate-400');
+                                btnEl.classList.replace('hover:bg-red-600', 'hover:text-red-600');
+                                btnEl.classList.remove('rounded');
+                                btnEl.dataset.confirm = 'false';
+                            }
+                        }, 3000);
+                    }
+                });
+            });
+        }
+
+
+        // --- Firebase Auth 狀態監聽 ---
+        onAuthStateChanged(auth, (user) => {
+            const authSec = document.getElementById('authSection');
+            const mainSec = document.getElementById('equipMainSection');
+            const badge = document.getElementById('cloudStatusBadge');
+            
+            if (user) {
+                // 已登入
+                authSec.classList.add('hidden');
+                mainSec.classList.remove('hidden');
+                mainSec.classList.add('flex');
+                document.getElementById('userEmailDisplay').innerText = user.email;
+                badge.innerHTML = '<i class="fa-solid fa-link mr-1"></i>雲端已連線';
+                badge.classList.replace('bg-slate-400', 'bg-blue-500');
+                
+                // 啟動 Firestore 即時監聽
+                document.getElementById('tableLoading').classList.remove('hidden');
+                dbUnsubscribe = onSnapshot(doc(db, 'appData', 'equipmentMap'), (docSnap) => {
+                    document.getElementById('tableLoading').classList.add('hidden');
+                    if (docSnap.exists()) {
+                        equipmentDict = docSnap.data().mapping || {};
+                    } else {
+                        equipmentDict = {};
+                    }
+                    renderEquipTable();
+                }, (error) => {
+                    console.error("Firestore Listener Error:", error);
+                    showToast('讀取雲端資料庫權限不足！請至 Firebase Rules 設定。', 'error');
+                });
+
+            } else {
+                // 未登入
+                if (dbUnsubscribe) { dbUnsubscribe(); dbUnsubscribe = null; }
+                authSec.classList.remove('hidden');
+                mainSec.classList.add('hidden');
+                mainSec.classList.remove('flex');
+                badge.innerHTML = '<i class="fa-solid fa-link-slash mr-1"></i>未登入';
+                badge.classList.replace('bg-blue-500', 'bg-slate-400');
+                equipmentDict = {};
+                renderEquipTable();
+            }
         });
-    });
-}
 
-function setCloudReadStatus(s){
-    const el=document.getElementById('cloudReadStatus');
-    if(s==='ok'){el.className='inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800';el.innerHTML='<i class="fa-solid fa-cloud-check mr-1"></i> 雲端資料已載入';}
-    else if(s==='error'){el.className='inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700';el.innerHTML='<i class="fa-solid fa-cloud-slash mr-1"></i> 無法讀取雲端';}
-    else{el.className='inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-500';el.innerHTML='<span class="loader mr-2" style="width:10px;height:10px;border-width:1.5px;border-top-color:#3b82f6;"></span> 連線中...';}
-}
-
-// ★ 關鍵修正：頁面載入後立即公開監聽 (不需登入，Rules 已允許 read: if true)
-onSnapshot(doc(db,'appData','equipmentMap'),snap=>{
-    equipmentDict=snap.exists()?(snap.data().mapping||{}):{};
-    renderEquipTable();setCloudReadStatus('ok');
-},err=>{console.error(err);setCloudReadStatus('error');showToast('無法讀取雲端設備資料！','error');});
-
-// Auth 狀態 (只影響管理員UI)
-onAuthStateChanged(auth,user=>{
-    const aS=document.getElementById('authSection'),mS=document.getElementById('equipMainSection'),bd=document.getElementById('cloudStatusBadge');
-    if(user){aS.classList.add('hidden');mS.classList.remove('hidden');document.getElementById('userEmailDisplay').innerText=user.email;bd.innerHTML='<i class="fa-solid fa-link mr-1"></i>管理員已連線';bd.style.background='rgba(74,222,128,0.4)';}
-    else{aS.classList.remove('hidden');mS.classList.add('hidden');bd.innerHTML='<i class="fa-solid fa-link-slash mr-1"></i>未登入';bd.style.background='rgba(255,255,255,0.2)';}
-});
-
-document.getElementById('btnLogin').addEventListener('click',async()=>{
-    const e=document.getElementById('emailInput').value,p=document.getElementById('passwordInput').value;
-    if(!e||!p)return showToast('請輸入帳號密碼','warning');
-    try{await signInWithEmailAndPassword(auth,e,p);showToast('管理員登入成功！','success');}catch(ex){showToast('登入失敗: '+ex.message,'error');}
-});
-document.getElementById('btnRegister').addEventListener('click',async()=>{
-    const e=document.getElementById('emailInput').value,p=document.getElementById('passwordInput').value;
-    if(!e||!p)return showToast('請輸入欲註冊的帳號密碼','warning');
-    try{await createUserWithEmailAndPassword(auth,e,p);showToast('註冊成功並已登入！','success');}catch(ex){showToast('註冊失敗: '+ex.message,'error');}
-});
-document.getElementById('btnLogout').addEventListener('click',()=>{signOut(auth);document.getElementById('emailInput').value='';document.getElementById('passwordInput').value='';});
-
-document.getElementById('btnAddManual').addEventListener('click',()=>{
-    const iI=document.getElementById('manualId'),nI=document.getElementById('manualName');
-    const rI=iI.value.trim(),rN=nI.value.trim();
-    if(!rI||!rN)return showToast('請填寫完整代碼與名稱','warning');
-    equipmentDict[norm(rI)]=rN;iI.value='';nI.value='';updateFB(equipmentDict);showToast('已新增並同步至雲端','success');
-});
-
-let clrT;
-document.getElementById('btnClearEquip').addEventListener('click',e=>{
-    const btn=e.currentTarget;
-    if(btn.dataset.confirm==='true'){equipmentDict={};updateFB(equipmentDict);document.getElementById('statusEquip').innerHTML='';document.getElementById('fileEquip').value='';showToast('已清空雲端資料庫','success');btn.innerHTML='<i class="fa-solid fa-trash-can mr-1"></i>清空雲端';btn.classList.remove('bg-red-500','text-white');btn.dataset.confirm='false';clearTimeout(clrT);}
-    else{if(!Object.keys(equipmentDict).length)return showToast('雲端已沒有任何資料','warning');btn.dataset.confirm='true';btn.innerHTML='<i class="fa-solid fa-triangle-exclamation mr-1"></i>確定清空？';btn.classList.add('bg-red-500','text-white');clrT=setTimeout(()=>{btn.innerHTML='<i class="fa-solid fa-trash-can mr-1"></i>清空雲端';btn.classList.remove('bg-red-500','text-white');btn.dataset.confirm='false';},3000);}
-});
-
-document.getElementById('fileEquip').addEventListener('change',async e=>{
-    const f=e.target.files[0];if(!f)return;
-    document.getElementById('statusEquip').innerHTML='<i class="fa-solid fa-spinner fa-spin text-amber-500"></i> 解析中...';
-    try{
-        const dm=await new Promise((res,rej)=>{
-            const r=new FileReader();r.onload=ev=>{try{const d=new Uint8Array(ev.target.result);const wb=window.XLSX.read(d,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];if(ws['!ref']){const rng=window.XLSX.utils.decode_range(ws['!ref']);rng.e.r=Math.max(rng.e.r,20000);rng.e.c=Math.max(rng.e.c,50);ws['!ref']=window.XLSX.utils.encode_range(rng);}const raw=window.XLSX.utils.sheet_to_json(ws,{header:1,defval:""});res(raw.filter(row=>row.some(c=>String(c).trim()!=='')));}catch(ex){rej(ex);}};r.onerror=rej;r.readAsArrayBuffer(f);
+        // 登入/註冊/登出 按鈕事件
+        document.getElementById('btnLogin').addEventListener('click', async () => {
+            const email = document.getElementById('emailInput').value;
+            const pw = document.getElementById('passwordInput').value;
+            if(!email || !pw) return showToast('請輸入帳號密碼', 'warning');
+            try {
+                await signInWithEmailAndPassword(auth, email, pw);
+                showToast('登入成功！', 'success');
+            } catch(e) {
+                showToast('登入失敗: ' + e.message, 'error');
+            }
         });
-        if(!dm||!dm.length){document.getElementById('statusEquip').innerHTML='<i class="fa-solid fa-triangle-exclamation text-yellow-500"></i> 無有效資料';return;}
-        let tR=-1,iI=-1,nI=-1;const mx=Math.min(10,dm.length);
-        for(let i=0;i<mx;i++){const row=dm[i];if(!row||!row.length)continue;const nr=row.map(h=>norm(String(h)));let ti=nr.findIndex(h=>['代碼','設備','設備編號','設備代號','MACHINE','ID'].includes(h));let tn=nr.findIndex(h=>['名稱','設備名稱','NAME'].includes(h));if(ti===-1)ti=nr.findIndex(h=>['代碼','設備','MACHINE','ID'].some(kw=>h.includes(kw)));if(tn===-1)tn=nr.findIndex(h=>['名稱','NAME'].some(kw=>h.includes(kw)));if(ti!==-1||tn!==-1){tR=i;iI=ti!==-1?ti:0;nI=tn!==-1?tn:1;break;}}
-        let si=tR+1;if(tR===-1){iI=0;nI=1;si=0;}
-        const tmp={...equipmentDict};let cnt=0;
-        for(let i=si;i<dm.length;i++){const row=dm[i];if(!row||!row.length)continue;const eid=norm(row[iI]);if(eid&&!['代碼','設備','設備編號','設備代號','MACHINE','ID'].includes(eid)){tmp[eid]=String(row[nI]||'未命名設備').trim();cnt++;}}
-        await updateFB(tmp);document.getElementById('statusEquip').innerHTML=`<i class="fa-solid fa-cloud-arrow-up text-blue-500"></i> 已合併 ${cnt} 筆並上傳`;e.target.value='';
-    }catch(ex){console.error(ex);document.getElementById('statusEquip').innerHTML='<i class="fa-solid fa-xmark text-red-500"></i> 讀取失敗';}
-});
 
-async function readExcel(file){
-    return new Promise((res,rej)=>{
-        const r=new FileReader();r.onload=e=>{try{const d=new Uint8Array(e.target.result);const wb=window.XLSX.read(d,{type:'array'});const ws=wb.Sheets[wb.SheetNames[0]];if(ws['!ref']){const rng=window.XLSX.utils.decode_range(ws['!ref']);rng.e.r=Math.max(rng.e.r,20000);rng.e.c=Math.max(rng.e.c,50);ws['!ref']=window.XLSX.utils.encode_range(rng);}const json=window.XLSX.utils.sheet_to_json(ws,{defval:""});res(json.filter(row=>Object.values(row).some(c=>String(c).trim()!=='')));}catch(ex){rej(ex);}};r.onerror=rej;r.readAsArrayBuffer(file);
-    });
-}
+        document.getElementById('btnRegister').addEventListener('click', async () => {
+            const email = document.getElementById('emailInput').value;
+            const pw = document.getElementById('passwordInput').value;
+            if(!email || !pw) return showToast('請輸入欲註冊的帳號密碼', 'warning');
+            try {
+                await createUserWithEmailAndPassword(auth, email, pw);
+                showToast('註冊成功並已登入！', 'success');
+            } catch(e) {
+                showToast('註冊失敗: ' + e.message, 'error');
+            }
+        });
 
-document.getElementById('fileProducts').addEventListener('change',async e=>{
-    const f=e.target.files[0];if(!f)return;document.getElementById('statusProducts').innerHTML='<i class="fa-solid fa-spinner fa-spin text-blue-500"></i> 解析中...';
-    try{productsData=await readExcel(f);document.getElementById('statusProducts').innerHTML=`<i class="fa-solid fa-check text-green-500"></i> 成功讀取 ${productsData.length} 筆紀錄`;}
-    catch{document.getElementById('statusProducts').innerHTML='<i class="fa-solid fa-xmark text-red-500"></i> 讀取失敗';}
-});
-document.getElementById('fileMolds').addEventListener('change',async e=>{
-    const f=e.target.files[0];if(!f)return;document.getElementById('statusMolds').innerHTML='<i class="fa-solid fa-spinner fa-spin text-blue-500"></i> 解析中...';
-    try{moldsData=await readExcel(f);document.getElementById('statusMolds').innerHTML=`<i class="fa-solid fa-check text-green-500"></i> 成功讀取 ${moldsData.length} 筆模具資料`;}
-    catch{document.getElementById('statusMolds').innerHTML='<i class="fa-solid fa-xmark text-red-500"></i> 讀取失敗';}
-});
+        document.getElementById('btnLogout').addEventListener('click', () => {
+            signOut(auth);
+            document.getElementById('emailInput').value = '';
+            document.getElementById('passwordInput').value = '';
+        });
 
-document.getElementById('btnProcess').addEventListener('click',()=>{
-    if(!productsData.length||!moldsData.length)return showToast('請先確認「產品」與「模具」兩份檔案皆已成功讀取！','error');
-    const fv=(row,kws)=>{const ks=Object.keys(row);const nk=kws.map(k=>norm(k));for(let k of ks)if(nk.includes(norm(k)))return row[k];for(let k of ks)if(nk.some(w=>norm(k).startsWith(w)))return row[k];for(let k of ks)if(nk.some(w=>norm(k).includes(w)))return row[k];return undefined;};
-    const pn=v=>{if(v==null||v==='')return 0;if(typeof v==='number')return v;return parseInt(String(v).replace(/,/g,''),10)||0;};
-    const p2m={},e2m={};
-    productsData.forEach(row=>{
-        const mid=fv(row,['模具編號','模具代號','Mold']),pid=fv(row,['產品編號','產品代號','Product']),ers=fv(row,['可用設備','設備','Machine','設備編號','設備代號']);
-        if(mid){const cm=String(mid).trim();if(!p2m[cm])p2m[cm]=new Set();if(pid)p2m[cm].add(String(pid).trim());if(!e2m[cm])e2m[cm]=new Set();if(ers)String(ers).split(/[;；,、]/).map(s=>norm(s)).filter(s=>s).forEach(eq=>e2m[cm].add(eq));}
-    });
-    mergedData=moldsData.map(mold=>{
-        const mid=String(fv(mold,['模具編號','模具代號','Mold'])||'').trim();
-        const life=pn(fv(mold,['模具壽命','保證壽命'])),usage=pn(fv(mold,['總使用次數','使用次數','已生產']));
-        const size=fv(mold,['模具尺寸','尺寸','備註'])||'未登記',customer=fv(mold,['客戶','Customer'])||'';
-        const es=new Set(e2m[mid]||[]);const mer=fv(mold,['可用設備','設備','Machine','設備編號','設備代號']);
-        if(mer)String(mer).split(/[;；,、]/).map(s=>norm(s)).filter(s=>s).forEach(eq=>es.add(eq));
-        const ed=Array.from(es).map(id=>({id,name:equipmentDict[id]||'【無對應資料】'}));
-        return{moldId:mid,size,life,usage,customer,equipDetails:ed,products:p2m[mid]?Array.from(p2m[mid]):[]};
-    });
-    document.getElementById('searchInput').disabled=false;document.getElementById('btnExport').disabled=false;
-    renderTable(mergedData);showToast('資料關聯與分析完成！','success');
-});
+        // --- 手動單筆新增設備 ---
+        document.getElementById('btnAddManual').addEventListener('click', () => {
+            const idInput = document.getElementById('manualId');
+            const nameInput = document.getElementById('manualName');
+            const rawId = idInput.value.trim();
+            const rawName = nameInput.value.trim();
+            
+            if(!rawId || !rawName) return showToast('請填寫完整代碼與名稱', 'warning');
+            
+            const equipId = normalizeString(rawId);
+            equipmentDict[equipId] = rawName;
+            
+            idInput.value = '';
+            nameInput.value = '';
+            
+            updateFirebaseDict(equipmentDict);
+            showToast(`已新增並同步至雲端`, 'success');
+        });
 
-function renderTable(data){
-    const tb=document.getElementById('resultTableBody');tb.innerHTML='';
-    if(!data.length){tb.innerHTML='<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500">無符合條件的資料</td></tr>';return;}
-    data.forEach(item=>{
-        const rem=item.life-item.usage;let sh;
-        if(!item.life)sh='<span class="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded-full border border-slate-200">無資料</span>';
-        else if(rem<=0)sh=`<span class="px-2 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-full border border-red-200">${rem.toLocaleString()}</span>`;
-        else if(rem<item.life*.2)sh=`<span class="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full border border-yellow-200">${rem.toLocaleString()}</span>`;
-        else sh=`<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full border border-green-200">${rem.toLocaleString()}</span>`;
-        const ph=item.products.length?item.products.map(p=>`<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-50 text-blue-700 rounded">${p}</span>`).join(''):'<span class="text-slate-400 italic text-sm">無</span>';
-        const eih=item.equipDetails.length?item.equipDetails.map(eq=>`<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-100 text-blue-800 rounded border border-blue-200 font-bold">${eq.id}</span>`).join(''):'<span class="text-slate-400 italic text-sm">-</span>';
-        const enh=item.equipDetails.length?item.equipDetails.map(eq=>eq.name==='【無對應資料】'?`<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-red-50 text-red-600 rounded border border-red-200 font-medium">未知 (${eq.id})</span>`:`<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200">${eq.name}</span>`).join(''):'<span class="text-slate-400 italic text-sm">-</span>';
-        const tr=document.createElement('tr');tr.className='hover:bg-blue-50 transition duration-150';
-        tr.innerHTML=`<td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-800">${item.moldId}</td><td class="px-6 py-4 text-sm text-slate-600 max-w-[200px]">${ph}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${item.customer||'<span class="text-slate-400 italic text-xs">無</span>'}</td><td class="px-6 py-4 text-sm bg-blue-50/30 max-w-[150px]">${eih}</td><td class="px-6 py-4 text-sm bg-blue-50/30 max-w-[250px]">${enh}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.life.toLocaleString()}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.usage.toLocaleString()}</td><td class="px-6 py-4 whitespace-nowrap text-right">${sh}</td>`;
-        tb.appendChild(tr);
-    });
-    document.getElementById('summaryText').innerText=`總計模具數量：${data.length} 組`;
-}
+        // --- 清空雲端全部設備 ---
+        let clearConfirmTimeout;
+        document.getElementById('btnClearEquip').addEventListener('click', (e) => {
+            const btn = e.currentTarget;
+            if (btn.dataset.confirm === 'true') {
+                equipmentDict = {};
+                updateFirebaseDict(equipmentDict);
+                document.getElementById('statusEquip').innerHTML = '';
+                document.getElementById('fileEquip').value = '';
+                showToast('已清空雲端資料庫', 'success');
+                
+                btn.innerHTML = '<i class="fa-solid fa-trash-can mr-1"></i>清空雲端';
+                btn.classList.remove('bg-red-600', 'text-white');
+                btn.classList.add('text-red-500', 'hover:text-white');
+                btn.dataset.confirm = 'false';
+                clearTimeout(clearConfirmTimeout);
+            } else {
+                if (Object.keys(equipmentDict).length === 0) return showToast('雲端已經沒有任何資料', 'warning');
+                
+                btn.dataset.confirm = 'true';
+                btn.innerHTML = '<i class="fa-solid fa-triangle-exclamation mr-1"></i>確定清空？';
+                btn.classList.remove('text-red-500', 'hover:text-white');
+                btn.classList.add('bg-red-600', 'text-white');
+                
+                clearConfirmTimeout = setTimeout(() => {
+                    btn.innerHTML = '<i class="fa-solid fa-trash-can mr-1"></i>清空雲端';
+                    btn.classList.remove('bg-red-600', 'text-white');
+                    btn.classList.add('text-red-500', 'hover:text-white');
+                    btn.dataset.confirm = 'false';
+                }, 3000);
+            }
+        });
 
-document.getElementById('searchInput').addEventListener('input',e=>{
-    const kw=e.target.value.toLowerCase();
-    renderTable(mergedData.filter(item=>`${item.moldId} ${item.products.join(' ')} ${item.customer} ${item.equipDetails.map(eq=>`${eq.id} ${eq.name}`).join(' ')}`.toLowerCase().includes(kw)));
-});
 
-document.getElementById('btnExport').addEventListener('click',()=>{
-    if(!mergedData.length)return;
-    const ed=mergedData.map(item=>({'模具編號':item.moldId,'對應產品編號':item.products.length?item.products.join(', '):'無','客戶':item.customer,'設備編號':item.equipDetails.length?item.equipDetails.map(eq=>eq.id).join(', '):'無','設備名稱':item.equipDetails.length?item.equipDetails.map(eq=>eq.name).join(', '):'無','保證壽命(次)':item.life,'總使用次數':item.usage,'剩餘壽命數':item.life>0?item.life-item.usage:'無資料','模具尺寸':item.size}));
-    const ws=window.XLSX.utils.json_to_sheet(ed);const wb=window.XLSX.utils.book_new();window.XLSX.utils.book_append_sheet(wb,ws,"模具與設備資產表");
-    const d=new Date();window.XLSX.writeFile(wb,`模具資產整合分析表_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.xlsx`);
-});
-</script>
+        // --- 一般 Excel 讀取通用邏輯 ---
+        async function readExcel(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        const workbook = window.XLSX.read(data, {type: 'array'});
+                        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                        
+                        // 🚀 核心維度破解
+                        if (worksheet['!ref']) {
+                            const range = window.XLSX.utils.decode_range(worksheet['!ref']);
+                            range.e.r = Math.max(range.e.r, 20000); 
+                            range.e.c = Math.max(range.e.c, 50);    
+                            worksheet['!ref'] = window.XLSX.utils.encode_range(range);
+                        }
+
+                        const json = window.XLSX.utils.sheet_to_json(worksheet, { defval: "" });
+                        const validJson = json.filter(row => Object.values(row).some(cell => String(cell).trim() !== ''));
+                        resolve(validJson);
+                    } catch (error) { reject(error); }
+                };
+                reader.onerror = (error) => reject(error);
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        // --- 設備 Excel 批次上傳覆蓋 (陣列掃描解析) ---
+        document.getElementById('fileEquip').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('statusEquip').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-orange-500"></i> 解析中...`;
+                try {
+                    const dataMatrix = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            try {
+                                const data = new Uint8Array(e.target.result);
+                                const workbook = window.XLSX.read(data, {type: 'array'});
+                                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                                
+                                if (worksheet['!ref']) {
+                                    const range = window.XLSX.utils.decode_range(worksheet['!ref']);
+                                    range.e.r = Math.max(range.e.r, 20000); 
+                                    range.e.c = Math.max(range.e.c, 50);    
+                                    worksheet['!ref'] = window.XLSX.utils.encode_range(range);
+                                }
+
+                                const rawJson = window.XLSX.utils.sheet_to_json(worksheet, { header: 1, defval: "" });
+                                const validJson = rawJson.filter(row => row.some(cell => String(cell).trim() !== ''));
+                                resolve(validJson);
+                            } catch (error) { reject(error); }
+                        };
+                        reader.onerror = (error) => reject(error);
+                        reader.readAsArrayBuffer(file);
+                    });
+
+                    if (!dataMatrix || dataMatrix.length === 0) {
+                        document.getElementById('statusEquip').innerHTML = `<i class="fa-solid fa-triangle-exclamation text-yellow-500"></i> 檔案無有效資料`;
+                        return;
+                    }
+
+                    let targetRowIndex = -1;
+                    let idIdx = -1;
+                    let nameIdx = -1;
+
+                    const maxScanRows = Math.min(10, dataMatrix.length);
+                    for (let i = 0; i < maxScanRows; i++) {
+                        const row = dataMatrix[i];
+                        if (!row || row.length === 0) continue;
+                        
+                        const normRow = row.map(h => normalizeString(String(h)));
+                        
+                        let tempIdIdx = normRow.findIndex(h => ['代碼', '設備', '設備編號', '設備代號', 'MACHINE', 'ID'].includes(h));
+                        let tempNameIdx = normRow.findIndex(h => ['名稱', '設備名稱', 'NAME'].includes(h));
+
+                        if (tempIdIdx === -1) tempIdIdx = normRow.findIndex(h => ['代碼', '設備', 'MACHINE', 'ID'].some(kw => h.includes(kw)));
+                        if (tempNameIdx === -1) tempNameIdx = normRow.findIndex(h => ['名稱', 'NAME'].some(kw => h.includes(kw)));
+
+                        if (tempIdIdx !== -1 || tempNameIdx !== -1) {
+                            targetRowIndex = i;
+                            idIdx = tempIdIdx !== -1 ? tempIdIdx : 0;
+                            nameIdx = tempNameIdx !== -1 ? tempNameIdx : 1;
+                            break;
+                        }
+                    }
+
+                    let startIndex = targetRowIndex + 1;
+                    if (targetRowIndex === -1) {
+                        idIdx = 0; nameIdx = 1; startIndex = 0;
+                    }
+
+                    let addedCount = 0;
+                    // 將新匯入的資料合併進現有字典
+                    const tempDict = { ...equipmentDict };
+                    for (let i = startIndex; i < dataMatrix.length; i++) {
+                        const row = dataMatrix[i];
+                        if (!row || row.length === 0) continue;
+
+                        const rawId = row[idIdx];
+                        const rawName = row[nameIdx];
+                        const equipId = normalizeString(rawId); 
+                        
+                        if (equipId && !['代碼', '設備', '設備編號', '設備代號', 'MACHINE', 'ID'].includes(equipId)) {
+                            tempDict[equipId] = String(rawName || '未命名設備').trim();
+                            addedCount++;
+                        }
+                    }
+
+                    // 寫入 Firebase
+                    updateFirebaseDict(tempDict);
+                    document.getElementById('statusEquip').innerHTML = `<i class="fa-solid fa-cloud-arrow-up text-blue-500"></i> 已合併 ${addedCount} 筆並上傳雲端`;
+                    e.target.value = '';
+                } catch (err) {
+                    console.error(err);
+                    document.getElementById('statusEquip').innerHTML = `<i class="fa-solid fa-xmark text-red-500"></i> 讀取失敗`;
+                }
+            }
+        });
+
+
+        // --- 產品與模具 Excel 讀取 (不變) ---
+        document.getElementById('fileProducts').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('statusProducts').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-500"></i> 解析中...`;
+                try {
+                    productsData = await readExcel(file);
+                    document.getElementById('statusProducts').innerHTML = `<i class="fa-solid fa-check text-green-500"></i> 成功讀取 ${productsData.length} 筆紀錄`;
+                } catch (err) { document.getElementById('statusProducts').innerHTML = `<i class="fa-solid fa-xmark text-red-500"></i> 讀取失敗`; }
+            }
+        });
+
+        document.getElementById('fileMolds').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                document.getElementById('statusMolds').innerHTML = `<i class="fa-solid fa-spinner fa-spin text-blue-500"></i> 解析中...`;
+                try {
+                    moldsData = await readExcel(file);
+                    document.getElementById('statusMolds').innerHTML = `<i class="fa-solid fa-check text-green-500"></i> 成功讀取 ${moldsData.length} 筆模具資料`;
+                } catch (err) { document.getElementById('statusMolds').innerHTML = `<i class="fa-solid fa-xmark text-red-500"></i> 讀取失敗`; }
+            }
+        });
+
+
+        // --- 核心資料處理 ---
+        document.getElementById('btnProcess').addEventListener('click', () => {
+            if (productsData.length === 0 || moldsData.length === 0) {
+                showToast('請先確認「產品」與「模具」兩份檔案皆已成功讀取！', 'error');
+                return;
+            }
+
+            const findValueByKeywords = (row, keywords) => {
+                const keys = Object.keys(row);
+                const normKws = keywords.map(kw => normalizeString(kw));
+                
+                for (let key of keys) {
+                    const cleanKey = normalizeString(key);
+                    if (normKws.includes(cleanKey)) return row[key];
+                }
+                for (let key of keys) {
+                    const cleanKey = normalizeString(key);
+                    if (normKws.some(kw => cleanKey.startsWith(kw))) return row[key];
+                }
+                for (let key of keys) {
+                    const cleanKey = normalizeString(key);
+                    if (normKws.some(kw => cleanKey.includes(kw))) return row[key];
+                }
+                return undefined;
+            };
+
+            const parseSafeNumber = (val) => {
+                if (val === undefined || val === null || val === '') return 0;
+                if (typeof val === 'number') return val;
+                return parseInt(String(val).replace(/,/g, ''), 10) || 0;
+            };
+
+            const moldToProductsMap = {};
+            const moldToEquipsMap = {}; 
+
+            productsData.forEach(row => {
+                const moldId = findValueByKeywords(row, ['模具編號', '模具代號', 'Mold']);
+                const productId = findValueByKeywords(row, ['產品編號', '產品代號', 'Product']);
+                const equipRawStr = findValueByKeywords(row, ['可用設備', '設備', 'Machine', '設備編號', '設備代號']); 
+
+                if (moldId) {
+                    const cleanMoldId = String(moldId).trim();
+                    
+                    if (!moldToProductsMap[cleanMoldId]) moldToProductsMap[cleanMoldId] = new Set();
+                    if (productId) moldToProductsMap[cleanMoldId].add(String(productId).trim());
+
+                    if (!moldToEquipsMap[cleanMoldId]) moldToEquipsMap[cleanMoldId] = new Set();
+                    if (equipRawStr) {
+                        const equips = String(equipRawStr).split(/[;；,、]/).map(s => normalizeString(s)).filter(s => s);
+                        equips.forEach(eq => moldToEquipsMap[cleanMoldId].add(eq));
+                    }
+                }
+            });
+
+            mergedData = moldsData.map(mold => {
+                const moldId = String(findValueByKeywords(mold, ['模具編號', '模具代號', 'Mold']) || '').trim();
+                const life = parseSafeNumber(findValueByKeywords(mold, ['模具壽命', '保證壽命']));
+                const usage = parseSafeNumber(findValueByKeywords(mold, ['總使用次數', '使用次數', '已生產']));
+                const size = findValueByKeywords(mold, ['模具尺寸', '尺寸', '備註']) || '未登記';
+                const customer = findValueByKeywords(mold, ['客戶', 'Customer']) || '';
+                
+                const equipSet = new Set(moldToEquipsMap[moldId] || []);
+                const moldEquipRawStr = findValueByKeywords(mold, ['可用設備', '設備', 'Machine', '設備編號', '設備代號']);
+                if (moldEquipRawStr) {
+                    const mEquips = String(moldEquipRawStr).split(/[;；,、]/).map(s => normalizeString(s)).filter(s => s);
+                    mEquips.forEach(eq => equipSet.add(eq));
+                }
+
+                const equipIds = Array.from(equipSet);
+                const equipDetails = equipIds.map(id => ({
+                    id: id,
+                    name: equipmentDict[id] || '【無對應資料】'
+                }));
+
+                return {
+                    moldId, size, life, usage, customer,
+                    equipDetails, 
+                    products: moldToProductsMap[moldId] ? Array.from(moldToProductsMap[moldId]) : []
+                };
+            });
+
+            document.getElementById('searchInput').disabled = false;
+            document.getElementById('btnExport').disabled = false;
+            renderTable(mergedData);
+            showToast('資料關聯與分析完成！', 'success');
+        });
+
+
+        // --- 表格渲染與匯出 (不變) ---
+        function renderTable(data) {
+            const tbody = document.getElementById('resultTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500">無符合條件的資料</td></tr>`;
+                return;
+            }
+
+            data.forEach(item => {
+                let remainingLife = item.life - item.usage;
+                let statusHtml = '';
+                if (item.life === 0) statusHtml = `<span class="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded-full border border-slate-200">無資料</span>`;
+                else if (remainingLife <= 0) statusHtml = `<span class="px-2 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-full border border-red-200">${remainingLife.toLocaleString()}</span>`;
+                else if (remainingLife < (item.life * 0.2)) statusHtml = `<span class="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full border border-yellow-200">${remainingLife.toLocaleString()}</span>`;
+                else statusHtml = `<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full border border-green-200">${remainingLife.toLocaleString()}</span>`;
+
+                const productsHtml = item.products.length > 0 
+                    ? item.products.map(p => `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-50 text-blue-700 rounded">${p}</span>`).join('')
+                    : `<span class="text-slate-400 italic text-sm">無</span>`;
+
+                const equipIdsHtml = item.equipDetails.length > 0
+                    ? item.equipDetails.map(eq => `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-100 text-blue-800 rounded border border-blue-200 font-bold">${eq.id}</span>`).join('')
+                    : `<span class="text-slate-400 italic text-sm">-</span>`;
+
+                const equipNamesHtml = item.equipDetails.length > 0
+                    ? item.equipDetails.map(eq => {
+                        if (eq.name === '【無對應資料】') {
+                            return `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-red-50 text-red-600 rounded border border-red-200 font-medium" title="未在雲端建檔">未知 (${eq.id})</span>`;
+                        }
+                        return `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200">${eq.name}</span>`;
+                    }).join('')
+                    : `<span class="text-slate-400 italic text-sm">-</span>`;
+
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-blue-50 transition duration-150";
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-800">${item.moldId}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600 max-w-[200px] flex-wrap">${productsHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${item.customer || '<span class="text-slate-400 italic text-xs">無</span>'}</td>
+                    
+                    <td class="px-6 py-4 text-sm bg-blue-50/30 max-w-[150px] flex-wrap">${equipIdsHtml}</td>
+                    <td class="px-6 py-4 text-sm bg-blue-50/30 max-w-[250px] flex-wrap">${equipNamesHtml}</td>
+                    
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.life.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.usage.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-right">${statusHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            document.getElementById('summaryText').innerText = `總計模具數量：${data.length} 組`;
+        }
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const keyword = e.target.value.toLowerCase();
+            const filteredData = mergedData.filter(item => {
+                const equipSearchText = item.equipDetails.map(eq => `${eq.id} ${eq.name}`).join(' ');
+                const searchStr = `${item.moldId} ${item.products.join(' ')} ${item.customer} ${equipSearchText}`.toLowerCase();
+                return searchStr.includes(keyword);
+            });
+            renderTable(filteredData);
+        });
+
+        document.getElementById('btnExport').addEventListener('click', () => {
+            if (mergedData.length === 0) return;
+            const exportData = mergedData.map(item => ({
+                '模具編號': item.moldId,
+                '對應產品編號': item.products.length > 0 ? item.products.join(', ') : '無',
+                '客戶': item.customer,
+                '設備編號': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.id).join(', ') : '無',
+                '設備名稱': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.name).join(', ') : '無',
+                '保證壽命(次)': item.life,
+                '總使用次數': item.usage,
+                '剩餘壽命數': item.life > 0 ? item.life - item.usage : '無資料',
+                '模具尺寸': item.size
+            }));
+            const worksheet = window.XLSX.utils.json_to_sheet(exportData);
+            const workbook = window.XLSX.utils.book_new();
+            window.XLSX.utils.book_append_sheet(workbook, worksheet, "模具與設備資產表");
+            const today = new Date();
+            const dateStr = today.getFullYear() + String(today.getMonth() + 1).padStart(2, '0') + String(today.getDate()).padStart(2, '0');
+            window.XLSX.writeFile(workbook, `模具資產整合分析表_${dateStr}.xlsx`);
+        });
+
+    </script>
 </body>
 </html>
