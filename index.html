@@ -827,10 +827,10 @@
             if (mergedData.length === 0) return;
             const exportData = mergedData.map(item => ({
                 '模具編號': item.moldId,
-                '對應產品編號': item.products.length > 0 ? item.products.join(', ') : '無',
+                '對應產品編號': item.products.length > 0 ? item.products.join(', ') : '',
                 '客戶': item.customer,
-                '設備編號': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.id).join(', ') : '無',
-                '設備名稱': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.name).join(', ') : '無',
+                '設備編號': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.id).join(', ') : '',
+                '設備名稱': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.name).join(', ') : '',
                 '保證壽命(次)': item.life,
                 '總使用次數': item.usage,
                 '剩餘壽命數': item.life > 0 ? item.life - item.usage : '無資料',
