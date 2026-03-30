@@ -140,7 +140,7 @@
         <header class="flex items-center justify-between glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900"><i class="fa-solid fa-cubes text-blue-600 mr-3"></i>模具資產整合分析系統</h1>
-                <p class="text-sm text-slate-500 mt-1">純前端資料關聯引擎 v2.1 | </p>
+                <p class="text-sm text-slate-500 mt-1">純前端資料關聯引擎 v2.1 | 極簡雲端視窗版</p>
             </div>
             
             <!-- 右上角狀態與管理員入口 -->
@@ -226,11 +226,12 @@
                             <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">保證壽命</th>
                             <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">總使用次數</th>
                             <th scope="col" class="px-6 py-4 text-right text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">剩餘壽命數</th>
+                            <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50">模具尺寸</th>
                         </tr>
                     </thead>
                     <tbody id="resultTableBody" class="bg-white divide-y divide-slate-200">
                         <tr>
-                            <td colspan="8" class="px-6 py-16 text-center text-slate-500">
+                            <td colspan="9" class="px-6 py-16 text-center text-slate-500">
                                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
                                     <i class="fa-solid fa-inbox text-3xl text-slate-400"></i>
                                 </div>
@@ -714,11 +715,15 @@
                     const cleanMoldId = String(moldId).trim();
                     
                     if (!moldToProductsMap[cleanMoldId]) moldToProductsMap[cleanMoldId] = new Set();
-                    if (productId) moldToProductsMap[cleanMoldId].add(String(productId).trim());
+                    if (productId && String(productId).trim() !== '' && !['無', '-', 'N/A'].includes(normalizeString(productId))) {
+                        moldToProductsMap[cleanMoldId].add(String(productId).trim());
+                    }
 
                     if (!moldToEquipsMap[cleanMoldId]) moldToEquipsMap[cleanMoldId] = new Set();
                     if (equipRawStr) {
-                        const equips = String(equipRawStr).split(/[;；,、]/).map(s => normalizeString(s)).filter(s => s);
+                        const equips = String(equipRawStr).split(/[;；,、]/)
+                            .map(s => normalizeString(s))
+                            .filter(s => s && !['無', '-', 'N/A', 'NA', 'NONE', '未登記', '未知'].includes(s));
                         equips.forEach(eq => moldToEquipsMap[cleanMoldId].add(eq));
                     }
                 }
@@ -728,20 +733,26 @@
                 const moldId = String(findValueByKeywords(mold, ['模具編號', '模具代號', 'Mold']) || '').trim();
                 const life = parseSafeNumber(findValueByKeywords(mold, ['模具壽命', '保證壽命']));
                 const usage = parseSafeNumber(findValueByKeywords(mold, ['總使用次數', '使用次數', '已生產']));
-                const size = findValueByKeywords(mold, ['模具尺寸', '尺寸', '備註']) || '未登記';
-                const customer = findValueByKeywords(mold, ['客戶', 'Customer']) || '';
+                
+                let size = String(findValueByKeywords(mold, ['模具尺寸', '尺寸', '備註']) || '').trim();
+                if (['未登記', '無', '-', 'N/A'].includes(normalizeString(size))) size = '';
+                
+                const customerRaw = String(findValueByKeywords(mold, ['客戶', 'Customer']) || '').trim();
+                const customer = ['無', '-', 'N/A'].includes(normalizeString(customerRaw)) ? '' : customerRaw;
                 
                 const equipSet = new Set(moldToEquipsMap[moldId] || []);
                 const moldEquipRawStr = findValueByKeywords(mold, ['可用設備', '設備', 'Machine', '設備編號', '設備代號']);
                 if (moldEquipRawStr) {
-                    const mEquips = String(moldEquipRawStr).split(/[;；,、]/).map(s => normalizeString(s)).filter(s => s);
+                    const mEquips = String(moldEquipRawStr).split(/[;；,、]/)
+                        .map(s => normalizeString(s))
+                        .filter(s => s && !['無', '-', 'N/A', 'NA', 'NONE', '未登記', '未知'].includes(s));
                     mEquips.forEach(eq => equipSet.add(eq));
                 }
 
                 const equipIds = Array.from(equipSet);
                 const equipDetails = equipIds.map(id => ({
                     id: id,
-                    name: equipmentDict[id] || '【無對應資料】'
+                    name: equipmentDict[id] || ''
                 }));
 
                 return {
@@ -764,48 +775,47 @@
             tbody.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="8" class="px-6 py-8 text-center text-slate-500">無符合條件的資料</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="9" class="px-6 py-8 text-center text-slate-500">無符合條件的資料</td></tr>`;
                 return;
             }
 
             data.forEach(item => {
                 let remainingLife = item.life - item.usage;
                 let statusHtml = '';
-                if (item.life === 0) statusHtml = `<span class="px-2 py-1 text-xs bg-slate-100 text-slate-600 rounded-full border border-slate-200">無資料</span>`;
+                if (item.life === 0) statusHtml = ``;
                 else if (remainingLife <= 0) statusHtml = `<span class="px-2 py-1 text-xs font-bold bg-red-100 text-red-700 rounded-full border border-red-200">${remainingLife.toLocaleString()}</span>`;
                 else if (remainingLife < (item.life * 0.2)) statusHtml = `<span class="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full border border-yellow-200">${remainingLife.toLocaleString()}</span>`;
                 else statusHtml = `<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full border border-green-200">${remainingLife.toLocaleString()}</span>`;
 
                 const productsHtml = item.products.length > 0 
                     ? item.products.map(p => `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-50 text-blue-700 rounded">${p}</span>`).join('')
-                    : `<span class="text-slate-400 italic text-sm">無</span>`;
+                    : ``;
 
                 const equipIdsHtml = item.equipDetails.length > 0
                     ? item.equipDetails.map(eq => `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-100 text-blue-800 rounded border border-blue-200 font-bold">${eq.id}</span>`).join('')
-                    : `<span class="text-slate-400 italic text-sm">-</span>`;
+                    : ``;
 
                 const equipNamesHtml = item.equipDetails.length > 0
                     ? item.equipDetails.map(eq => {
-                        if (eq.name === '【無對應資料】') {
-                            return `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-red-50 text-red-600 rounded border border-red-200 font-medium" title="未在雲端建檔">未知 (${eq.id})</span>`;
-                        }
+                        if (!eq.name) return ``;
                         return `<span class="inline-block px-2 py-1 mr-1 mb-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200">${eq.name}</span>`;
                     }).join('')
-                    : `<span class="text-slate-400 italic text-sm">-</span>`;
+                    : ``;
 
                 const tr = document.createElement('tr');
                 tr.className = "hover:bg-blue-50 transition duration-150";
                 tr.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-800">${item.moldId}</td>
                     <td class="px-6 py-4 text-sm text-slate-600 max-w-[200px] flex-wrap">${productsHtml}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${item.customer || '<span class="text-slate-400 italic text-xs">無</span>'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${item.customer || ''}</td>
                     
                     <td class="px-6 py-4 text-sm bg-blue-50/30 max-w-[150px] flex-wrap">${equipIdsHtml}</td>
                     <td class="px-6 py-4 text-sm bg-blue-50/30 max-w-[250px] flex-wrap">${equipNamesHtml}</td>
                     
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.life.toLocaleString()}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.usage.toLocaleString()}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.life > 0 ? item.life.toLocaleString() : ''}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.usage > 0 ? item.usage.toLocaleString() : ''}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-right">${statusHtml}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${item.size || ''}</td>
                 `;
                 tbody.appendChild(tr);
             });
@@ -817,7 +827,7 @@
             const keyword = e.target.value.toLowerCase();
             const filteredData = mergedData.filter(item => {
                 const equipSearchText = item.equipDetails.map(eq => `${eq.id} ${eq.name}`).join(' ');
-                const searchStr = `${item.moldId} ${item.products.join(' ')} ${item.customer} ${equipSearchText}`.toLowerCase();
+                const searchStr = `${item.moldId} ${item.products.join(' ')} ${item.customer} ${equipSearchText} ${item.size}`.toLowerCase();
                 return searchStr.includes(keyword);
             });
             renderTable(filteredData);
@@ -828,13 +838,13 @@
             const exportData = mergedData.map(item => ({
                 '模具編號': item.moldId,
                 '對應產品編號': item.products.length > 0 ? item.products.join(', ') : '',
-                '客戶': item.customer,
+                '客戶': item.customer || '',
                 '設備編號': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.id).join(', ') : '',
-                '設備名稱': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.name).join(', ') : '',
-                '保證壽命(次)': item.life,
-                '總使用次數': item.usage,
-                '剩餘壽命數': item.life > 0 ? item.life - item.usage : '無資料',
-                '模具尺寸': item.size
+                '設備名稱': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.name).filter(n => n).join(', ') : '',
+                '保證壽命(次)': item.life > 0 ? item.life : '',
+                '總使用次數': item.usage > 0 ? item.usage : '',
+                '剩餘壽命數': item.life > 0 ? item.life - item.usage : '',
+                '模具尺寸': item.size || ''
             }));
             const worksheet = window.XLSX.utils.json_to_sheet(exportData);
             const workbook = window.XLSX.utils.book_new();
