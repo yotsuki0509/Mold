@@ -140,7 +140,7 @@
         <header class="flex items-center justify-between glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900"><i class="fa-solid fa-cubes text-blue-600 mr-3"></i>模具資產整合分析系統</h1>
-                <p class="text-sm text-slate-500 mt-1">純前端資料關聯引擎 v2.2 | 極簡雲端視窗版</p>
+                <p class="text-sm text-slate-500 mt-1">純前端資料關聯引擎 v2.3 | 極簡雲端視窗版</p>
             </div>
             
             <!-- 右上角狀態與管理員入口 -->
@@ -792,9 +792,9 @@
                 else if (remainingLife < (item.life * 0.2)) statusHtml = `<span class="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full border border-yellow-200">${remainingLife.toLocaleString()}</span>`;
                 else statusHtml = `<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full border border-green-200">${remainingLife.toLocaleString()}</span>`;
 
-                // 產品排版：使用 Grid 強制一行兩個，超過自動斷行
+                // 產品排版：改為彈性排列 (Flex-wrap)，不強制一行幾個，長度自然完整顯示
                 const productsHtml = item.products.length > 0 
-                    ? `<div class="inline-grid grid-cols-2 gap-1.5 w-full">` + item.products.map(p => `<span class="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-100 whitespace-nowrap overflow-hidden text-ellipsis text-center" title="${p}">${p}</span>`).join('') + `</div>`
+                    ? `<div class="flex flex-wrap gap-1.5">` + item.products.map(p => `<span class="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-100 whitespace-nowrap">${p}</span>`).join('') + `</div>`
                     : ``;
 
                 const equipIdsHtml = item.equipDetails.length > 0
