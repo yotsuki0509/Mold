@@ -134,7 +134,7 @@
 
 
     <!-- 主體內容 -->
-    <div class="max-w-7xl mx-auto space-y-6 pb-8">
+    <div class="w-[98%] max-w-none mx-auto space-y-6 pb-8">
         
         <!-- 系統標題區 -->
         <header class="flex items-center justify-between glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
@@ -798,7 +798,9 @@
                 const equipNamesHtml = item.equipDetails.length > 0
                     ? `<div class="flex flex-wrap gap-1.5">` + item.equipDetails.map(eq => {
                         if (!eq.name) return ``;
-                        return `<span class="px-2.5 py-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 whitespace-nowrap shadow-sm">${eq.name}</span>`;
+                        // 將分號替換為換行標籤 <br>，並將標籤改為 inline-block 讓換行生效且置左
+                        const formattedName = eq.name.replace(/[;；]/g, '<br>');
+                        return `<span class="px-2.5 py-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-200 shadow-sm leading-snug inline-block text-left">${formattedName}</span>`;
                     }).join('') + `</div>`
                     : ``;
 
@@ -806,11 +808,11 @@
                 tr.className = "hover:bg-blue-50 transition duration-150";
                 tr.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-800">${item.moldId}</td>
-                    <td class="px-6 py-4 text-sm text-slate-600 min-w-[150px] max-w-[250px]">${productsHtml}</td>
+                    <td class="px-6 py-4 text-sm text-slate-600">${productsHtml}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${item.customer || ''}</td>
                     
-                    <td class="px-6 py-4 text-sm bg-blue-50/30 min-w-[120px] max-w-[200px]">${equipIdsHtml}</td>
-                    <td class="px-6 py-4 text-sm bg-blue-50/30 min-w-[150px] max-w-[300px]">${equipNamesHtml}</td>
+                    <td class="px-6 py-4 text-sm bg-blue-50/30">${equipIdsHtml}</td>
+                    <td class="px-6 py-4 text-sm bg-blue-50/30">${equipNamesHtml}</td>
                     
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.life > 0 ? item.life.toLocaleString() : ''}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-right text-slate-600">${item.usage > 0 ? item.usage.toLocaleString() : ''}</td>
