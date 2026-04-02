@@ -140,7 +140,7 @@
         <header class="flex items-center justify-between glass-panel p-6 rounded-xl shadow-sm border border-slate-200">
             <div>
                 <h1 class="text-2xl font-bold text-slate-900"><i class="fa-solid fa-cubes text-blue-600 mr-3"></i>模具資產整合分析系統</h1>
-                <p class="text-sm text-slate-500 mt-1">純前端資料關聯引擎 v2.1 | 極簡雲端視窗版</p>
+                <p class="text-sm text-slate-500 mt-1">純前端資料關聯引擎 v2.2 | 極簡雲端視窗版</p>
             </div>
             
             <!-- 右上角狀態與管理員入口 -->
@@ -219,6 +219,7 @@
                     <thead class="bg-slate-50 sticky top-0 z-10 outline outline-1 outline-slate-200 shadow-sm">
                         <tr>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 whitespace-nowrap">模具編號</th>
+                            <th scope="col" class="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 whitespace-nowrap">模穴數</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 whitespace-nowrap">對應產品編號</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider bg-slate-50 whitespace-nowrap">客戶</th>
                             <th scope="col" class="px-6 py-4 text-left text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50 border-b-2 border-blue-200 whitespace-nowrap">設備編號</th>
@@ -231,7 +232,7 @@
                     </thead>
                     <tbody id="resultTableBody" class="bg-white divide-y divide-slate-200">
                         <tr>
-                            <td colspan="9" class="px-6 py-16 text-center text-slate-500">
+                            <td colspan="10" class="px-6 py-16 text-center text-slate-500">
                                 <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-slate-100 mb-4">
                                     <i class="fa-solid fa-inbox text-3xl text-slate-400"></i>
                                 </div>
@@ -734,6 +735,10 @@
                 const life = parseSafeNumber(findValueByKeywords(mold, ['模具壽命', '保證壽命']));
                 const usage = parseSafeNumber(findValueByKeywords(mold, ['總使用次數', '使用次數', '已生產']));
                 
+                // 抓取模穴數
+                const cavityRaw = String(findValueByKeywords(mold, ['模穴數', '穴數', 'Cavity']) || '').trim();
+                const cavity = ['無', '-', 'N/A', '未登記', '未知'].includes(normalizeString(cavityRaw)) ? '' : cavityRaw;
+
                 let size = String(findValueByKeywords(mold, ['模具尺寸', '尺寸', '備註']) || '').trim();
                 if (['未登記', '無', '-', 'N/A'].includes(normalizeString(size))) size = '';
                 
@@ -756,7 +761,7 @@
                 }));
 
                 return {
-                    moldId, size, life, usage, customer,
+                    moldId, cavity, size, life, usage, customer,
                     equipDetails, 
                     products: moldToProductsMap[moldId] ? Array.from(moldToProductsMap[moldId]) : []
                 };
@@ -775,7 +780,7 @@
             tbody.innerHTML = '';
 
             if (data.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="9" class="px-6 py-8 text-center text-slate-500">無符合條件的資料</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="10" class="px-6 py-8 text-center text-slate-500">無符合條件的資料</td></tr>`;
                 return;
             }
 
@@ -787,8 +792,9 @@
                 else if (remainingLife < (item.life * 0.2)) statusHtml = `<span class="px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700 rounded-full border border-yellow-200">${remainingLife.toLocaleString()}</span>`;
                 else statusHtml = `<span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 rounded-full border border-green-200">${remainingLife.toLocaleString()}</span>`;
 
+                // 產品排版：使用 Grid 強制一行兩個，超過自動斷行
                 const productsHtml = item.products.length > 0 
-                    ? `<div class="flex flex-wrap gap-1.5">` + item.products.map(p => `<span class="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-100 whitespace-nowrap">${p}</span>`).join('') + `</div>`
+                    ? `<div class="inline-grid grid-cols-2 gap-1.5 w-full">` + item.products.map(p => `<span class="px-2 py-1 text-xs bg-blue-50 text-blue-700 rounded border border-blue-100 whitespace-nowrap overflow-hidden text-ellipsis text-center" title="${p}">${p}</span>`).join('') + `</div>`
                     : ``;
 
                 const equipIdsHtml = item.equipDetails.length > 0
@@ -808,6 +814,7 @@
                 tr.className = "hover:bg-blue-50 transition duration-150";
                 tr.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-bold text-slate-800">${item.moldId}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600 text-center">${item.cavity || ''}</td>
                     <td class="px-6 py-4 text-sm text-slate-600">${productsHtml}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">${item.customer || ''}</td>
                     
@@ -829,7 +836,7 @@
             const keyword = e.target.value.toLowerCase();
             const filteredData = mergedData.filter(item => {
                 const equipSearchText = item.equipDetails.map(eq => `${eq.id} ${eq.name}`).join(' ');
-                const searchStr = `${item.moldId} ${item.products.join(' ')} ${item.customer} ${equipSearchText} ${item.size}`.toLowerCase();
+                const searchStr = `${item.moldId} ${item.cavity} ${item.products.join(' ')} ${item.customer} ${equipSearchText} ${item.size}`.toLowerCase();
                 return searchStr.includes(keyword);
             });
             renderTable(filteredData);
@@ -839,6 +846,7 @@
             if (mergedData.length === 0) return;
             const exportData = mergedData.map(item => ({
                 '模具編號': item.moldId,
+                '模穴數': item.cavity || '',
                 '對應產品編號': item.products.length > 0 ? item.products.join(', ') : '',
                 '客戶': item.customer || '',
                 '設備編號': item.equipDetails.length > 0 ? item.equipDetails.map(eq => eq.id).join(', ') : '',
